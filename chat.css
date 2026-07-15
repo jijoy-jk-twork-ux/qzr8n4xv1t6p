@@ -4,7 +4,16 @@ body { background-color: #f0f2f5; display: flex; justify-content: center; align-
 .chat-container { width: 100%; max-width: 450px; height: 90vh; background: #fff; display: flex; flex-direction: column; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); overflow: hidden; }
 .chat-header { background: #ff4757; color: white; padding: 15px; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; }
 .chat-header-info { display: flex; flex-direction: column; align-items: center; }
-.chat-box { flex: 1; padding: 15px; overflow-y: auto; background: #efe7dd; display: flex; flex-direction: column; gap: 10px; }
+.chat-box {
+    flex: 1;
+    padding: 15px;
+    overflow-y: auto;
+    background: #efe7dd;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    min-height: 200px; /* ബോക്സ് ചുരുങ്ങി പോകാതിരിക്കാൻ */
+}
 
 .message { padding: 9px 14px; border-radius: 15px; max-width: 75%; font-size: 0.95rem; word-wrap: break-word; line-height: 1.4; }
 .sent { background: #d9fdd3; color: #000; align-self: flex-end; border-top-right-radius: 2px; box-shadow: 0 1px 1px rgba(0,0,0,0.1); }
