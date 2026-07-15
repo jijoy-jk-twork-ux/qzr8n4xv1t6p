@@ -142,22 +142,33 @@ if (signUpBtn) {
         try {
             // എ) ഫയർബേസ് ഓതന്റിക്കേഷൻ വഴി പുതിയ അക്കൗണ്ട് ഉണ്ടാക്കുന്നു
             const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-            const userUid = userCredential.user.uid; // പുതിയ യുണീക്ക് UID ലഭിച്ചു!
+            const userUid = userCredential.user.uid; // പുതിയ യുണീക്ക് UID
 
-            // ബി) പുതിയ UID ഡോക്യുമെന്റ് ഐഡി ആക്കി Firestore 'users' കളക്ഷനിലേക്ക് കയറ്റുന്നു
-            const userData = {
+            // ബി) Firestore-ലേക്ക് അയക്കാനുള്ള ഡാറ്റ (ഇതിൽ serverTimestamp ഉപയോഗിക്കാം)
+            const userDataForFirestore = {
                 uid: userUid,
                 email: email,
                 username: username,
                 fullName: fullName,
                 profilePic: randomProfilePic,
-                createdAt: serverTimestamp() // തത്സമയ ഫയർബേസ് സെർവർ ടൈംസ്റ്റാമ്പ്
+                isVerified: false, // നമ്മൾ സെറ്റ് ചെയ്ത ബ്ലൂ ടിക്ക് ഫീൽഡ്
+                createdAt: serverTimestamp() 
             };
 
-            await setDoc(doc(db, "users", userUid), userData);
+            await setDoc(doc(db, "users", userUid), userDataForFirestore);
 
-            // സി) ബ്രൗസറിലെ ലോക്കൽ സ്റ്റോറേജിലേക്ക് ഡാറ്റ മാറ്റുന്നു
-            localStorage.setItem("infinity_user", JSON.stringify(userData));
+            // സി) ലോക്കൽ സ്റ്റോറേജിലേക്ക് മാറ്റാനുള്ള ഡാറ്റ (ഇതിൽ serverTimestamp ഒഴിവാക്കി പകരം സാധാ ഡേറ്റ് നൽകുന്നു)
+            const userDataForLocal = {
+                uid: userUid,
+                email: email,
+                username: username,
+                fullName: fullName,
+                profilePic: randomProfilePic,
+                isVerified: false,
+                createdAt: new Date().toISOString() // 👈 ഇതോടെ ലോക്കൽ സ്റ്റോറേജ് ക്രാഷ് ആകില്ല!
+            };
+
+            localStorage.setItem("infinity_user", JSON.stringify(userDataForLocal));
 
             alert("Account created successfully!");
             window.location.href = "home.html"; 
