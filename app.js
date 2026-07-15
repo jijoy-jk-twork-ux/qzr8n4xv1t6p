@@ -1,3 +1,25 @@
+// home.js-ന്റെ തുടക്കത്തിൽ ഇത് പേസ്റ്റ് ചെയ്യുക
+let currentUserData = null;
+
+try {
+    const userDataString = localStorage.getItem("infinity_user");
+    
+    if (!userDataString) {
+        // ലോഗിൻ ഡാറ്റ ഇല്ലെങ്കിൽ മാത്രം ഇൻഡെക്സ് പേജിലേക്ക് വിടുക (Relative Path പക്കയാക്കി)
+        window.location.replace("./index.html");
+    } else {
+        // ഡാറ്റ ഉണ്ടെങ്കിൽ അത് സുരക്ഷിതമായി റീഡ് ചെയ്യുക
+        currentUserData = JSON.parse(userDataString);
+        console.log("Welcome,", currentUserData.username);
+    }
+} catch (error) {
+    console.error("Local storage error:", error);
+    localStorage.removeItem("infinity_user");
+    window.location.replace("./index.html");
+}
+
+// ⚠️ താഴെയുള്ള നിന്റെ ബാക്കി കോഡുകൾ (പോസ്റ്റ് ലോഡ് ചെയ്യുന്നതും മറ്റും) ഇതിന് താഴെ തുടരാം...
+
 // ==========================================
 // 1. CONFIGURATIONS & FIREBASE SETUP
 // ==========================================
