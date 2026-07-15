@@ -28,7 +28,7 @@ console.log("Auth System Connected successfully!");
 document.addEventListener("DOMContentLoaded", () => {
     const currentUser = localStorage.getItem("infinity_user");
     if (currentUser) {
-        window.location.href = "home.html"; 
+        window.location.href = "./home.html"; 
     } else {
         document.body.style.display = "flex"; // സെന്റർ അലൈൻമെന്റ് തെറ്റാതിരിക്കാൻ 'flex' ആക്കി
     }
@@ -171,7 +171,7 @@ if (signUpBtn) {
             localStorage.setItem("infinity_user", JSON.stringify(userDataForLocal));
 
             alert("Account created successfully!");
-            window.location.href = "home.html"; 
+            window.location.href = "./home.html"; 
 
         } catch (error) {
             console.error("Error signing up:", error);
