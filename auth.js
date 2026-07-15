@@ -29,7 +29,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const currentUser = localStorage.getItem("infinity_user");
     if (currentUser) {
         // സർവർ എറർ തടയാൻ പക്ക അബ്‌സല്യൂട്ട് റൂട്ട് ഉപയോഗിക്കുന്നു
-        window.location.replace(window.location.origin + "/home.html"); 
+        window.location.replace(window.location.replace + "/home.html"); 
     } else {
         document.body.style.display = "flex"; 
     }
