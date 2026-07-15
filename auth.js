@@ -1,8 +1,8 @@
 // ==========================================
 // 1. CONFIGURATIONS & FIREBASE SETUP (v10 SDK)
 // ==========================================
-import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-import { getFirestore, doc, getDoc, setDoc, collection, query, where, getDocs, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+import { getFirestore, doc, setDoc, collection, query, where, getDocs, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 import { getAuth, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
 // നിന്റെ Firebase കോൺഫിഗറേഷൻ
@@ -28,9 +28,10 @@ console.log("Auth System Connected successfully!");
 document.addEventListener("DOMContentLoaded", () => {
     const currentUser = localStorage.getItem("infinity_user");
     if (currentUser) {
-        window.location.href = "./home.html"; 
+        // സർവർ എറർ തടയാൻ പക്ക അബ്‌സല്യൂട്ട് റൂട്ട് ഉപയോഗിക്കുന്നു
+        window.location.replace(window.location.origin + "/home.html"); 
     } else {
-        document.body.style.display = "flex"; // സെന്റർ അലൈൻമെന്റ് തെറ്റാതിരിക്കാൻ 'flex' ആക്കി
+        document.body.style.display = "flex"; 
     }
 });
 
@@ -60,7 +61,6 @@ if (usernameInput) {
         const username = usernameInput.value.trim().toLowerCase();
         const usernameRegex = /^[a-zA-Z0-9_]+$/;
 
-        // പരിശോധിക്കാൻ തുടങ്ങുമ്പോൾ തന്നെ സ്റ്റാറ്റസ് മാറ്റുന്നു
         usernameStatus.style.display = "block";
         usernameStatus.style.color = "#aaaaaa";
         usernameStatus.innerText = "checking...";
@@ -80,7 +80,6 @@ if (usernameInput) {
         }
 
         try {
-            // Firestore-ൽ 'username' എന്ന ഫീൽഡിൽ ഈ പേര് നേരത്തെ ഉണ്ടോ എന്ന് ചെക്ക് ചെയ്യുന്നു
             const usersRef = collection(db, "users");
             const q = query(usersRef, where("username", "==", username));
             const querySnapshot = await getDocs(q);
@@ -105,7 +104,6 @@ if (usernameInput) {
     });
 }
 
-// ഫോം വാലിഡിറ്റി ചെക്ക് ചെയ്യാനുള്ള ഇൻപുട്ട് ലിസണർ
 if (emailInput && passwordInput && fullNameInput) {
     [emailInput, passwordInput, fullNameInput].forEach(input => {
         input.addEventListener('input', checkFormValidity);
@@ -140,24 +138,24 @@ if (signUpBtn) {
         const randomProfilePic = randomStickers[Math.floor(Math.random() * randomStickers.length)];
 
         try {
-            // എ) ഫയർബേസ് ഓതന്റിക്കേഷൻ വഴി പുതിയ അക്കൗണ്ട് ഉണ്ടാക്കുന്നു
+            // എ) അക്കൗണ്ട് ക്രിയേഷൻ
             const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-            const userUid = userCredential.user.uid; // പുതിയ യുണീക്ക് UID
+            const userUid = userCredential.user.uid; 
 
-            // ബി) Firestore-ലേക്ക് അയക്കാനുള്ള ഡാറ്റ (ഇതിൽ serverTimestamp ഉപയോഗിക്കാം)
+            // ബി) Firestore ഡാറ്റ
             const userDataForFirestore = {
                 uid: userUid,
                 email: email,
                 username: username,
                 fullName: fullName,
                 profilePic: randomProfilePic,
-                isVerified: false, // നമ്മൾ സെറ്റ് ചെയ്ത ബ്ലൂ ടിക്ക് ഫീൽഡ്
+                isVerified: false, 
                 createdAt: serverTimestamp() 
             };
 
             await setDoc(doc(db, "users", userUid), userDataForFirestore);
 
-            // സി) ലോക്കൽ സ്റ്റോറേജിലേക്ക് മാറ്റാനുള്ള ഡാറ്റ (ഇതിൽ serverTimestamp ഒഴിവാക്കി പകരം സാധാ ഡേറ്റ് നൽകുന്നു)
+            // സി) ലോക്കൽ സ്റ്റോറേജ് ഡാറ്റ
             const userDataForLocal = {
                 uid: userUid,
                 email: email,
@@ -165,16 +163,22 @@ if (signUpBtn) {
                 fullName: fullName,
                 profilePic: randomProfilePic,
                 isVerified: false,
-                createdAt: new Date().toISOString() // 👈 ഇതോടെ ലോക്കൽ സ്റ്റോറേജ് ക്രാഷ് ആകില്ല!
+                createdAt: new Date().toISOString() 
             };
 
             localStorage.setItem("infinity_user", JSON.stringify(userDataForLocal));
 
             alert("Account created successfully!");
-            window.location.href = "./home.html"; 
+            
+            // 🌟 സെർവർ 500 എറർ തകർക്കാനുള്ള അൾട്ടിമേറ്റ് വഴി (window.location.origin)
+            window.location.replace(window.location.origin + "/home.html"); 
 
         } catch (error) {
             console.error("Error signing up:", error);
+            
+            // എറർ ഉണ്ടായാൽ ലോക്കൽ സ്റ്റോറേജ് ക്ലിയർ ചെയ്ത് ലൂപ്പ് ഒഴിവാക്കുന്നു
+            localStorage.removeItem("infinity_user");
+            
             alert("Sign up unsuccessful: " + error.message);
             signUpBtn.innerText = "തുടങ്ങാം!";
             signUpBtn.disabled = false;
