@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="ml">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>InfinitySpot - Profile</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            background-color: #0d0d0d;
+            color: #fff;
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+        .profile-container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        /* പ്രൊഫൈൽ ഹെഡർ */
+        .profile-header {
+            display: flex;
+            align-items: center;
+            gap: 25px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #222;
+        }
+        .profile-img-container {
+            position: relative;
+        }
+        .profile-img {
+            width: 90px;
+            height: 90px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid #ff1e42;
+            background-color: #1a1a1a;
+        }
+        .profile-info {
+            flex-grow: 1;
+        }
+        .profile-info h2 {
+            margin: 0;
+            font-size: 22px;
+            font-weight: bold;
+        }
+        .profile-info .username-handle {
+            margin: 3px 0 8px 0;
+            color: #888;
+            font-size: 14px;
+        }
+        .profile-info .bio-text {
+            margin: 5px 0 0 0;
+            font-size: 14px;
+            color: #ddd;
+            line-height: 1.4;
+        }
+        /* പോസ്റ്റ് ഗ്രിഡ് */
+        .my-posts-title {
+            margin: 20px 0 15px 0;
+            font-size: 16px;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #ff1e42;
+        }
+        .posts-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 5px;
+        }
+        .grid-item {
+            position: relative;
+            width: 100%;
+            padding-top: 100%; /* 1:1 Square Ratio */
+            background-color: #1a1a1a;
+            overflow: hidden;
+            border-radius: 4px;
+        }
+        .grid-item img, .grid-item video {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .no-posts {
+            grid-column: span 3;
+            text-align: center;
+            padding: 50px 20px;
+            color: #888;
+            font-size: 15px;
+        }
+        .nav-btn {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 20px;
+            cursor: pointer;
+            margin-bottom: 20px;
+            transition: color 0.2s;
+        }
+        .nav-btn:hover {
+            color: #ff1e42;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="profile-container">
+        <!-- ഹോം പേജിലേക്ക് പോകാനുള്ള ബാക്ക് ബട്ടൺ -->
+        <button class="nav-btn" onclick="window.location.href='home.html'"><i class="fa-solid fa-arrow-left"></i></button>
+
+        <!-- പ്രൊഫൈൽ വിവരങ്ങൾ കാണിക്കുന്ന ഭാഗം -->
+        <div class="profile-header">
+            <div class="profile-img-container">
+                <!-- ഡിഫോൾട്ട് ആയി ഒരു റാൻഡം അവതാർ ലോഡ് ചെയ്യും -->
+                <img id="user-profile-pic" src="https://api.dicebear.com/7.x/adventurer/svg?seed=default" alt="Profile Picture" class="profile-img">
+            </div>
+            <div class="profile-info">
+                <h2 id="user-display-name">Loading...</h2>
+                <p id="user-handle" class="username-handle">@username</p>
+                <!-- റാൻഡം ബയോ അല്ലെങ്കിൽ കസ്റ്റം ബയോ കാണിക്കുന്ന ഇടം -->
+                <p id="user-bio" class="bio-text">Exploring the digital space! 🚀</p>
+            </div>
+        </div>
+
+        <div class="my-posts-title">My posts</div>
+
+        <!-- യൂസറുടെ പോസ്റ്റുകൾ മാത്രം കാണിക്കുന്ന ഗ്രിഡ് -->
+        <div class="posts-grid" id="my-posts-grid">
+            <!-- ജാവാസ്ക്രിപ്റ്റ് വഴി പോസ്റ്റുകൾ ഇവിടെ ലോഡ് ചെയ്യും -->
+        </div>
+    </div>
+
+    <!-- Firebase & Custom Script -->
+    <script type="module" src="profile.js"></script>
+</body>
+</html>
