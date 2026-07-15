@@ -176,18 +176,27 @@ if (submitPostBtn) {
     });
 }
 
+// 🌟 എഡിറ്റ് ചെയ്ത സെക്യൂർ ഫങ്ക്ഷൻ (വരി 145)
 async function savePostToFirebase(mediaUrl, mediaType, caption, publicId) {
     try {
-        let userId = "anonymous";
+        // ഫയർബേസ് Auth-ൽ നിന്ന് ലോഗിൻ ചെയ്ത യൂസറുടെ ഒറിജിനൽ സെഷൻ എടുക്കുന്നു
+        const user = auth.currentUser;
+
+        if (!user) {
+            throw new Error("യൂസർ ഫയർബേസിൽ ലോഗിൻ ചെയ്തിട്ടില്ല! ദയവായി അക്കൗണ്ട് ഒന്നുകൂടി പരിശോധിക്കുക.");
+        }
+
+        let userId = user.uid; // ഒറിജിനൽ UID ഫയർബേസ് റൂൾസിന് വേണ്ടി
         let username = "Anonymous User";
         let profilePic = "https://via.placeholder.com/40/ff1e42/ffffff?text=U";
 
+        // ബാക്കി വിവരങ്ങൾ ലോക്കൽ സ്റ്റോറേജിൽ നിന്ന് എടുക്കുന്നു
         if (currentUserData) {
-            userId = currentUserData.uid || "anonymous";
-            username = currentUserData.username || "Anonymous User";
+            username = currentUserData.username || username;
             profilePic = currentUserData.profilePic || profilePic;
         }
 
+        // Firestore-ലേക്ക് പോസ്റ്റ് സേവ് ചെയ്യുന്നു
         await addDoc(collection(db, "posts"), {
             url: mediaUrl,
             type: mediaType,
