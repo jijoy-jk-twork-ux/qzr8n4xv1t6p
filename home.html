@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="ml">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>InfinitySpot</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- Icons ലഭിക്കാൻ വേണ്ടിയുള്ള FontAwesome ലിങ്ക് -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+
+    <!-- Top App Bar -->
+    <header class="top-bar">
+        <div class="logo">InfinitySpot</div>
+        <div class="top-icons">
+            <i class="fa-regular fa-heart"></i>
+            <i class="fa-regular fa-paper-plane"></i>
+        </div>
+    </header>
+
+    <!-- Main Content (Feed) -->
+    <!-- ഫയർബേസിൽ നിന്നുള്ള പോസ്റ്റുകൾ ഓട്ടോമാറ്റിക് ആയി ഇതിന്റെ ഉള്ളിലേക്കാണ് വരിക -->
+    <main class="feed-container">
+        
+        <!-- ഡാറ്റാബേസ് കണക്ട് ആകുന്നതുവരെ കാണിക്കാൻ ഒരു ചെറിയ ലോഡിംഗ് മെസ്സേജ് -->
+        <p style="text-align:center; padding:20px; color:#888;">Loading posts...</p>
+
+    </main>
+    
+    <!-- Upload Post Modal (Popup Window) -->
+    <div id="upload-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>New posts</h3>
+                <span class="close-btn" id="close-modal">&times;</span>
+            </div>
+            
+            <div class="modal-body">
+                <!-- ഫയൽ സെലക്ട് ചെയ്യാനുള്ള ഏരിയ -->
+                <div class="file-drop-area" id="drop-area">
+                    <i class="fa-solid fa-cloud-arrow-up"></i>
+                    <p>Select photo</p>
+                    <input type="file" id="file-input" accept="image/*,video/*" hidden>
+                    <button class="select-btn" onclick="document.getElementById('file-input').click()">Browse file</button>
+                </div>
+                
+                <!-- സെലക്ട് ചെയ്ത മീഡിയ കാണാനുള്ള ഭാഗം -->
+                <div id="preview-container" class="hidden">
+                    <img id="image-preview" src="" alt="Preview" class="hidden">
+                    <video id="video-preview" controls class="hidden"></video>
+                    <button id="remove-file-btn" class="remove-btn">Replace</button>
+                </div>
+
+                <!-- ക്യാപ്ഷൻ എഴുതാനുള്ള ബോക്സ് -->
+                <textarea id="caption-input" placeholder="ക്യാപ്ഷൻ ഇവിടെ എഴുതാം..."></textarea>
+                
+                <button id="submit-post-btn" class="upload-submit-btn">Post</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bottom Navigation Bar -->
+    <nav class="bottom-nav">
+        <i class="fa-solid fa-house active"></i>
+        <a href="search.html"><i class="fa-solid fa-magnifying-glass"></i></a>
+        <i class="fa-regular fa-square-plus" id="upload-btn"></i>
+        <i class="fa-solid fa-clapperboard"></i>
+        <a href="profile.html" style="color: inherit; text-decoration: none;">
+    <i class="fa-regular fa-user"></i>
+</a>
+
+    </nav>
+    
+    <!-- ജാവാസ്ക്രിപ്റ്റ് ഫയൽ കണക്ട് ചെയ്യുന്നു (Module ടൈപ്പിൽ തന്നെ) -->
+    <script type="module" src="app.js"></script>
+    <script type="module" src="internal.js"></script>
+</body>
+</html>
