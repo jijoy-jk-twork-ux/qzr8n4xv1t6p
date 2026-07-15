@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="ml">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>InfinitySpot - Search</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { background-color: #0d0d0d; color: white; font-family: sans-serif; margin: 0; }
+        
+        /* സെർച്ച് ബാർ (Red & Grey Theme) */
+        .search-container { padding: 20px; background: #1a1a1a; border-bottom: 2px solid #ff1e42; }
+        .search-box { display: flex; gap: 10px; }
+        .search-box input { flex: 1; padding: 12px; border-radius: 5px; border: none; background: #333; color: white; }
+        .search-box button { padding: 10px 20px; background: #ff1e42; border: none; color: white; border-radius: 5px; cursor: pointer; }
+        
+        /* റിസൾട്ട് സ്റ്റൈൽ */
+        #search-results { padding: 20px; }
+        .user-card { background: #1a1a1a; padding: 15px; border-radius: 10px; display: flex; align-items: center; justify-content: space-between; border-left: 4px solid #ff1e42; }
+        .not-found { color: #888; text-align: center; margin-top: 20px; }
+    </style>
+</head>
+<body>
+
+    <div class="search-container">
+        <div class="search-box">
+            <input type="text" id="search-input" placeholder="Search username here...">
+            <button id="search-btn"><i class="fa-solid fa-magnifying-glass"></i></button>
+        </div>
+    </div>
+
+    <div id="search-results"></div>
+
+    <script type="module" src="search.js"></script>
+</body>
+</html>
