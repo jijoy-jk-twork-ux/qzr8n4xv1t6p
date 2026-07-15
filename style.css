@@ -1,0 +1,323 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+/* ഡാർക്ക് ഗ്രേ ബാക്ക്ഗ്രൗണ്ട് */
+body {
+    background-color: #121212; 
+    color: #e0e0e0; 
+    display: flex;
+    justify-content: center;
+}
+
+/* മൊബൈൽ ആപ്പ് വീതി നിലനിർത്താൻ */
+.top-bar, .feed-container, .bottom-nav {
+    width: 100%;
+    max-width: 450px;
+}
+
+/* Top Bar Styling */
+.top-bar {
+    position: fixed;
+    top: 0;
+    height: 60px;
+    background: #1e1e1e; 
+    border-bottom: 2px solid #ff1e42; /* ബ്രൈറ്റ് റെഡ് ബോർഡർ */
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 15px;
+    z-index: 100;
+}
+
+/* ലോഗോ റെഡ് കളർ */
+.logo {
+    font-size: 24px;
+    font-weight: 900;
+    letter-spacing: 1px;
+    color: #ff1e42; 
+    text-shadow: 0 0 10px rgba(255, 30, 66, 0.3);
+}
+
+.top-icons i {
+    font-size: 22px;
+    margin-left: 20px;
+    cursor: pointer;
+    color: #b3b3b3;
+    transition: color 0.3s ease;
+}
+
+.top-icons i:hover {
+    color: #ff1e42;
+}
+
+/* Feed Container */
+.feed-container {
+    margin-top: 60px;
+    margin-bottom: 60px;
+    padding: 10px;
+}
+
+/* Post Card Styling (ഫയർബേസിൽ നിന്ന് വരുന്ന പോസ്റ്റുകൾക്ക്) */
+.post {
+    background: #1e1e1e; 
+    border: 1px solid #2d2d2d;
+    margin-top: 15px;
+    border-radius: 12px; 
+    overflow: hidden;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+}
+
+.post-header {
+    display: flex;
+    align-items: center;
+    padding: 12px;
+    background: #1a1a1a;
+}
+
+.profile-pic {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    margin-right: 10px;
+    object-fit: cover;
+    border: 2px solid #ff1e42; 
+}
+
+.username {
+    font-weight: 600;
+    font-size: 14px;
+    color: #ffffff;
+}
+
+/* ഇമേജ്/വീഡിയോ സൈസ് കറക്റ്റ് ആക്കാൻ */
+.main-media {
+    width: 100%;
+    max-height: 450px;
+    object-fit: cover;
+    display: block;
+    background-color: #000;
+}
+
+/* ആക്ഷൻ ബട്ടണുകൾ */
+.post-actions {
+    padding: 12px 15px;
+    display: flex;
+    gap: 20px;
+}
+
+.post-actions i {
+    font-size: 22px;
+    cursor: pointer;
+    color: #e0e0e0;
+    transition: transform 0.2s, color 0.2s;
+}
+
+.post-actions i:hover {
+    color: #ff1e42;
+}
+
+.post-details {
+    padding: 0 15px 15px 15px;
+    font-size: 14px;
+    line-height: 1.5;
+    color: #cccccc;
+}
+
+.post-details strong {
+    color: #ffffff;
+}
+
+/* Bottom Navigation */
+.bottom-nav {
+    position: fixed;
+    bottom: 0;
+    height: 55px;
+    background: #1e1e1e;
+    border-top: 1px solid #2d2d2d;
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    z-index: 100;
+}
+
+.bottom-nav i {
+    font-size: 20px;
+    color: #888888;
+    cursor: pointer;
+    transition: color 0.3s, transform 0.2s;
+}
+
+/* പ്ലസ് ബട്ടണിനും ഹോം ബട്ടണിനും റെഡ് ഹൈലൈറ്റ് */
+.bottom-nav i.active, 
+.bottom-nav #upload-btn {
+    color: #ff1e42;
+    text-shadow: 0 0 8px rgba(255, 30, 66, 0.5);
+}
+
+.bottom-nav i:hover {
+    color: #ff1e42;
+    transform: scale(1.1);
+}
+
+/* ==========================================
+   UPLOAD MODAL STYLING (പോപ്പ്-അപ്പ് വിൻഡോ)
+   ========================================== */
+
+.modal {
+    display: none; /* തുടക്കത്തിൽ ഹൈഡ് ചെയ്തു വെക്കും */
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.85);
+    z-index: 1000;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+}
+
+.modal-content {
+    background: #1e1e1e;
+    width: 100%;
+    max-width: 400px;
+    border-radius: 15px;
+    border: 1px solid #ff1e42; 
+    overflow: hidden;
+    box-shadow: 0 10px 25px rgba(255, 30, 66, 0.2);
+    animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+    from { transform: translateY(50px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px;
+    border-bottom: 1px solid #2d2d2d;
+}
+
+.modal-header h3 {
+    color: #ffffff;
+    font-size: 18px;
+}
+
+.close-btn {
+    font-size: 28px;
+    color: #888888;
+    cursor: pointer;
+    transition: color 0.2s;
+}
+
+.close-btn:hover {
+    color: #ff1e42;
+}
+
+.modal-body {
+    padding: 20px;
+}
+
+/* File Drop Area */
+.file-drop-area {
+    border: 2px dashed #ff1e42; /* റെഡ് ഡാഷ്‌ഡ് ബോർഡർ */
+    padding: 30px 10px;
+    border-radius: 10px;
+    text-align: center;
+    margin-bottom: 15px;
+}
+
+.file-drop-area i {
+    font-size: 40px;
+    color: #ff1e42;
+    margin-bottom: 10px;
+}
+
+.file-drop-area p {
+    font-size: 14px;
+    color: #b3b3b3;
+    margin-bottom: 15px;
+}
+
+.select-btn {
+    background: #ff1e42;
+    color: white;
+    border: none;
+    padding: 8px 18px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: bold;
+}
+
+/* Preview Box */
+#preview-container {
+    text-align: center;
+    margin-bottom: 15px;
+}
+
+#preview-container img, #preview-container video {
+    max-width: 100%;
+    max-height: 250px;
+    border-radius: 8px;
+    border: 1px solid #2d2d2d;
+    margin-bottom: 10px;
+}
+
+.remove-btn {
+    background: #ff1e42;
+    color: white;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 5px;
+    font-size: 12px;
+    cursor: pointer;
+}
+
+/* Caption Input */
+#caption-input {
+    width: 100%;
+    height: 80px;
+    background: #121212;
+    border: 1px solid #2d2d2d;
+    border-radius: 8px;
+    color: white;
+    padding: 10px;
+    resize: none;
+    font-size: 14px;
+    margin-bottom: 15px;
+    outline: none;
+}
+
+#caption-input:focus {
+    border-color: #ff1e42;
+}
+
+/* Submit Button */
+.upload-submit-btn {
+    width: 100%;
+    background: #ff1e42;
+    color: white;
+    border: none;
+    padding: 12px;
+    border-radius: 8px;
+    font-size: 15px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.upload-submit-btn:hover {
+    background: #e01535;
+}
+
+/* ഒളിപ്പിച്ചു വെക്കാനുള്ള യൂട്ടിലിറ്റി ക്ലാസ് */
+.hidden {
+    display: none !important;
+}
