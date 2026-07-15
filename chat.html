@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="ml">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Personal Chat</title>
+    <link rel="stylesheet" href="chat.css">
+</head>
+<body>
+
+    <div class="chat-container">
+        <!-- ചാറ്റ് ഹെഡർ -->
+        <div class="chat-header">
+            <h3 id="chat-user-name">Chat Room</h3>
+        </div>
+        
+        <!-- മെസ്സേജുകൾ കാണിക്കുന്ന ബോക്സ് -->
+        <div id="chat-box" class="chat-box"></div>
+        
+        <!-- മെസ്സേജ് ടൈപ്പ് ചെയ്യുന്ന ഭാഗം -->
+        <div class="input-area">
+            <input type="text" id="message-input" placeholder="മെസ്സേജ് ടൈപ്പ് ചെയ്യൂ..." autocomplete="off">
+            <button id="send-btn">Send</button>
+        </div>
+    </div>
+
+    <!-- Firebase SDK ആൻഡ് ചാറ്റ് ലോജിക് കണക്ട് ചെയ്യുന്നു -->
+    <script type="module" src="chat.js"></script>
+</body>
+</html>
