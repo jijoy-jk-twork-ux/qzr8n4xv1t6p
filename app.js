@@ -351,7 +351,7 @@ window.handleRegisterUser = async (email, password, username) => {
 
         console.log("New user registered and added to Firestore!");
         alert("ലോഗിൻ വിജയകരമായി പൂർത്തിയായി!");
-        window.location.href = "home.html"; // രജിസ്റ്റർ ചെയ്തയുടൻ ഹോം പേജിലേക്ക് വിടുന്നു
+        window.location.href = "./home.html"; // രജിസ്റ്റർ ചെയ്തയുടൻ ഹോം പേജിലേക്ക് വിടുന്നു
 
     } catch (error) {
         console.error("Registration failed:", error);
