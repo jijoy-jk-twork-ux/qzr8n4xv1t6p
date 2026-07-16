@@ -44,11 +44,29 @@ document.addEventListener('DOMContentLoaded', () => {
                         // തനിമയുള്ള കാർഡ് ഉണ്ടാക്കുന്നു
                         const card = document.createElement("div");
                         card.className = "user-card";
+                        
+                        // യൂസർക്ക് ക്ലിക്ക് ചെയ്യാൻ സാധിക്കുമെന്ന് മനസ്സിലാക്കാൻ പോയിന്റർ സ്റ്റൈൽ നൽകുന്നു
+                        card.style.cursor = "pointer"; 
+
+                        // കാർഡിന്റെ അകത്തുള്ള HTML സെറ്റ് ചെയ്യുന്നു
                         card.innerHTML = `
-                            <span><strong>${userName}</strong></span>
-                            <!-- ഇവിടെ startChat ലേക്ക് uid-യും പേരും പാസ്സ് ചെയ്യുന്നു -->
-                            <button class="chat-btn" onclick="window.startChat('${userUid}', '${userName}')">Chat</button>
+                            <span style="flex-grow: 1; font-weight: bold;">${userName}</span>
+                            <!-- ചാറ്റ് ചെയ്യാനുള്ള ബട്ടൺ -->
+                            <button class="chat-btn" id="chat-btn-${userUid}">Chat</button>
                         `;
+
+                        // 1. ചാറ്റ് ബട്ടണിൽ ക്ലിക്ക് ചെയ്താൽ ചാറ്റ് പേജിലേക്ക് പോകാൻ
+                        const chatBtn = card.querySelector(`#chat-btn-${userUid}`);
+                        chatBtn.addEventListener('click', (e) => {
+                            e.stopPropagation(); // 👈 ഇത് വളരെ പ്രധാനമാണ്! കാർഡിന്റെ ക്ലിക്ക് ഇവന്റ് വർക്ക് ആകുന്നത് ഇത് തടയും.
+                            window.startChat(userUid, userName);
+                        });
+
+                        // 2. ചാറ്റ് ബട്ടൺ അല്ലാത്ത ബാക്കി കാർഡിൽ എവിടെ ഞെക്കിയാലും ആ യൂസറുടെ പ്രൊഫൈൽ ജസ്റ്റ് കാണാൻ (View Only)
+                        card.addEventListener('click', () => {
+                            window.location.href = `profile.html?id=${userUid}`;
+                        });
+
                         display.appendChild(card);
                     });
                 }
@@ -60,12 +78,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
-// 👈 ഈ ഫങ്ഷനാണ് ഇപ്പോൾ ചാറ്റ് പേജിലേക്ക് യുആർഎൽ വഴി ഡാറ്റ കൊണ്ടുപോകുന്നത്
+// ചാറ്റ് പേജിലേക്ക് യുആർഎൽ വഴി ഡാറ്റ കൊണ്ടുപോകുന്ന ഫങ്ഷൻ
 window.startChat = (uid, username) => {
     if (!uid) {
-        alert("യൂസർ ഐഡി ലഭ്യമല്ല!");
+        alert("that username does not exist!");
         return;
     }
-    // chat.html-ലേക്ക് UID-യും പേരും പാസ്സ് ചെയ്ത് വിടുന്നു
     window.location.href = `chat.html?target=${uid}&name=${encodeURIComponent(username)}`;
 };
+
