@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="ml">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Thank You - Infinity Spot</title>
+    
+    <!-- Google Fonts -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap">
+    
+    <style>
+        /*--- Core Theme & Reset ---*/
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Roboto', sans-serif;
+        }
+
+        body {
+            background-color: #000000;
+            /* Netflix Style Red & Grey Neon Glow Background */
+            background-image: 
+                radial-gradient(circle at 15% 25%, rgba(229, 9, 20, 0.12) 0%, transparent 45%), 
+                radial-gradient(circle at 85% 75%, rgba(85, 85, 85, 0.15) 0%, transparent 45%);
+            color: #e5e5e5;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            overflow: hidden;
+        }
+
+        /*--- Thanks Container Box ---*/
+        .tnx-container {
+            background: rgba(20, 20, 20, 0.85);
+            backdrop-filter: blur(10px);
+            border: 1px solid #222;
+            border-radius: 16px;
+            padding: 40px 25px;
+            text-align: center;
+            max-width: 420px;
+            width: 100%;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8);
+        }
+
+        /*--- Heart Icon Box with Red Glow ---*/
+        .icon-box {
+            width: 70px;
+            height: 70px;
+            background: #1a1a1a;
+            border: 2px solid #e50914;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 0 auto 25px auto;
+            box-shadow: 0 0 20px rgba(229, 9, 20, 0.35);
+        }
+
+        .icon-box span {
+            font-size: 28px;
+        }
+
+        /*--- Typography ---*/
+        h1 {
+            font-size: 22px;
+            font-weight: 700;
+            color: #ffffff;
+            margin-bottom: 20px;
+            letter-spacing: 0.5px;
+        }
+
+        p {
+            font-size: 14px;
+            color: #b3b3b3; /* Smooth Grey */
+            line-height: 1.7;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        /*--- Highlight Styles ---*/
+        .project-name {
+            color: #ffffff;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+        }
+
+        .developer-name {
+            color: #e50914; /* Netflix Red */
+            font-weight: 700;
+            text-shadow: 0 0 10px rgba(229, 9, 20, 0.5);
+        }
+
+        /*--- Countdown Text (Instagram Style Grey) ---*/
+        .countdown-text {
+            font-size: 12px;
+            color: #555555; 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            letter-spacing: 0.3px;
+        }
+
+        .countdown-text span {
+            color: #e50914;
+            font-weight: 700;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="tnx-container">
+        <!-- ഹാർട്ട് ഐക്കൺ -->
+        <div class="icon-box">
+            <span>❤️</span>
+        </div>
+        
+        <h1>InfinitySpot</h1>
+        
+        <p>
+            ഞങ്ങളുടെ ഈ ചെറിയൊരു ക്രിയേറ്റീവ് സ്പേസ് ഉപയോഗിച്ചതിന് ഒത്തിരി നന്ദി! <br><br>
+            
+            <span class="project-name">Infinity Spot</span>-ന്റെ പിന്നിൽ പ്രവർത്തിച്ച 
+            ഡെവലപ്പർ <span class="developer-name">Jijo Krishnan</span> 
+            എന്ന ഞാൻ നിങ്ങളോട് കടപ്പെട്ടിരിക്കുന്നു. <br><br>
+            
+           കുറെ ദിവസത്തെ കഷ്ടപ്പാട് ആണ് നിങ്ങൾ ഇപ്പൊ കാണുന്ന ഈ app. പുതിയ അപ്ഡേറ്റ്സ് ഒക്കെ വരുന്നുണ്ട്, ഡൌൺലോഡ് ചെയ്യാതെ തന്നെ ഓരോ ഫീച്ചേഴ്സ് നിങ്ങക്ക് ലഭിക്കും. ഇൻഫിനിറ്റി സ്പോട്ടിന്റെ യാത്ര തുടങ്ങുകയാണ് നിങ്ങളും കൂടെ ഉണ്ടാവണം . ഈ ആപ്പ് നിങ്ങൾക്ക് ഇഷ്ടപ്പെട്ടു എന്ന് കരുതുന്നു, ഇനിയും ഒരുപാട് പുതിയ മാറ്റങ്ങളുമായി നമ്മൾ മുന്നോട്ട് പോകും!
+        </p>
+        
+        <!-- 5 സെക്കൻഡ് കൗണ്ട്ഡൗൺ -->
+        <div class="countdown-text">
+            Redirecting to home page in <span id="countdown">10</span> seconds...
+        </div>
+    </div>
+
+    <!-- ഓട്ടോമാറ്റിക് റീഡയറക്ട് സ്ക്രിപ്റ്റ് -->
+    <script>
+        let seconds = 10;
+        const countdownElement = document.getElementById('countdown');
+
+        const interval = setInterval(() => {
+            seconds--;
+            countdownElement.innerText = seconds;
+
+            if (seconds <= 0) {
+                clearInterval(interval);
+                // ഹോം പേജ് ലിങ്ക് (ആവശ്യമെങ്കിൽ മാറ്റാം)
+                window.location.href = 'home.html'; 
+            }
+        }, 1000);
+    </script>
+
+</body>
+</html>
