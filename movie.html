@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="ml">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>INFINITY SPOT</title>
+    <link rel="stylesheet" href="h.css">
+  </head>
+  <body>
+
+        <!-- Top App Bar -->
+    <header class="top-bar">
+      <h2 class="logo">InfinityMovies</h2>
+    </header>
+
+
+    <!-- Netflix Style Search Bar -->
+    <div class="search-container">
+      <input type="text" id="searchBox" placeholder="Search Movies...">
+      <button onclick="searchMovie()">🔍</button>
+    </div>
+
+    <!-- Main Content -->
+    <main class="app-content">
+      <h2 class="section-title">#Trending Movies</h2>
+      <div id="movie-container"></div>
+    </main>
+
+    <!-- Bottom Navigation Bar (True App Experience) -->
+    <nav class="bottom-nav">
+      <div class="nav-item active" onclick="location.href='movies.html'">
+        <span class="nav-icon"></span>
+        <span class="nav-label"></span>
+      </div>
+      <h2 class="creator-title">creators creativity</h2>
+    </nav>
+
+    <script src="h.js"></script>
+  </body>
+</html>
