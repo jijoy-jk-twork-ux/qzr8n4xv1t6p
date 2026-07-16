@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="ml">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Infinity Spot - Users</title>
+    
+    <!-- ഇൻ-ബിൽറ്റ് ഇൻ-ലൈൻ CSS (ഡിസൈൻ പക്കാ ആക്കാൻ) -->
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: #f4f7f6;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        /* യൂസർ കൗണ്ടർ കാണിക്കാനുള്ള മെയിൻ ബോക്സ് */
+        .counter-card {
+            background: #ffffff;
+            padding: 30px 24px;
+            border-radius: 16px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+            text-align: center;
+            width: 100%;
+            max-width: 360px;
+            transition: transform 0.3s ease;
+        }
+
+        .counter-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .counter-card h3 {
+            color: #333333;
+            font-size: 1.2rem;
+            margin-bottom: 15px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+
+        /* നമ്പറുകൾ കാണിക്കുന്ന ഡിസൈൻ */
+        .count-display {
+            font-size: 3.5rem;
+            font-weight: 800;
+            color: #4CAF50; /* പച്ച നിറം */
+            margin-bottom: 10px;
+            display: block;
+            animation: pulse 2s infinite;
+        }
+
+        .counter-card p {
+            color: #777777;
+            font-size: 0.9rem;
+        }
+
+        /* ചെറിയൊരു ആനിമേഷൻ എഫക്റ്റ് */
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.02); }
+            100% { transform: scale(1); }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 📊 യൂസർ കൗണ്ടർ ബോക്സ് -->
+    <div class="counter-card">
+        <h3>Total Registered Users</h3>
+        <span id="user-count" class="count-display">...</span>
+        <p>Total number of Infinityspot app users</p>
+    </div>
+
+    <!-- 🌐 ഫയർബേസ് കണക്ഷനും ലോജിക്കും ഇവിടെ തുടങ്ങുന്നു -->
+    <script type="module">
+        // 1. ഫയർബേസ് മോഡ്യൂളുകൾ ഇംപോർട്ട് ചെയ്യുന്നു
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getFirestore, collection, getCountFromServer } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+        // 2. നിന്റെ ഫയർബേസ് കോൺഫിഗറേഷൻ
+        const firebaseConfig = {
+            apiKey: "AIzaSyCNQaHi-L3fninLxkePZBaNR7vu6JiYEwQ",
+            authDomain: "infinityspotx.firebaseapp.com",
+            projectId: "infinityspotx",
+            storageBucket: "infinityspotx.firebasestorage.app",
+            messagingSenderId: "400346792298",
+            appId: "1:400346792298:web:5fd101c225a547902b6513"
+        };
+
+        // 3. ഫയർബേസ് ഇനിഷ്യലൈസ് ചെയ്യുന്നു
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        // 4. സെർവറിൽ നിന്ന് യൂസേഴ്സിന്റെ എണ്ണം മാത്രം എടുക്കുന്ന പവർഫുൾ ഫങ്ക്ഷൻ
+        async function displayUserCount() {
+            try {
+                const coll = collection(db, "users");
+                // വെറും നമ്പർ മാത്രം എടുക്കാൻ getCountFromServer ഉപയോഗിക്കുന്നു
+                const snapshot = await getCountFromServer(coll);
+                
+                const countElement = document.getElementById("user-count");
+                if (countElement) {
+                    countElement.innerText = snapshot.data().count; // എണ്ണം ഇവിടെ സെറ്റ് ചെയ്യുന്നു
+                }
+            } catch (error) {
+                console.error("Error getting user count:", error);
+                document.getElementById("user-count").innerText = "⚠️";
+            }
+        }
+
+        // പേജ് ലോഡ് ആകുമ്പോൾ റൺ ചെയ്യുക
+        displayUserCount();
+    </script>
+
+</body>
+</html>
