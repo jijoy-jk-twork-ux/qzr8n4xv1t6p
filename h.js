@@ -4,22 +4,22 @@
 const movies = [
   {
     title: "Aaro",
-    poster: "Aaro.",
+    poster: "Aaro.jpg",
     video: "https://www.youtube.com/embed/v9jqDP7U8b8?si=GXxLEIJYgOorr8u5"
   },
   {
     title: "Mareechika",
-    poster: "Jk.",
+    poster: "Jk.jpg",
     video: "https://www.youtube.com/embed/Bj6YTLGktnY?si=4jK9ERCVw1Zr_SzZ"
   },
   {
     title: "Valayam",
-    poster: "Valayam.",
+    poster: "Valayam.jpg",
     video: "https://www.youtube.com/embed/2dI2DTsX3Ek?si=lJsssgtjDt8RShhI"
   },
   {
     title: "Maruvasham",
-    poster: "Maruvasham.",
+    poster: "Maruvasham.jpg",
     video: "https://www.youtube.com/embed/OthoLwGgY6o?si=wQPP7Muvs6PMs9JG"
   }
 ];
