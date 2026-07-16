@@ -1,0 +1,235 @@
+/*--- Netflix Core Theme & Reset ---*/
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap');
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Roboto', sans-serif;
+    -webkit-tap-highlight-color: transparent;
+}
+
+/*--- Moving Background അനിമേഷൻ ഒഴിവാക്കിയ BODY (Static Neon Red & Blue) ---*/
+body {
+    background-color: #000000; /* ബേസ് ബ്ലാക്ക് */
+    
+    /* അനിമേഷൻ ഒഴിവാക്കി, ചുവപ്പും നീലയും ഗ്ലോകൾ സ്ഥിരമായി ഒരു സ്ഥലത്ത് നിലനിർത്തിയിരിക്കുന്നു */
+    background-image: 
+        radial-gradient(circle at 15% 25%, rgba(229, 9, 20, 0.12) 0%, transparent 45%), 
+        radial-gradient(circle at 85% 75%, rgba(0, 102, 255, 0.12) 0%, transparent 45%);
+    
+    color: #e5e5e5;
+    padding: 10px 15px 90px 15px; /* താഴെയുള്ള ബോട്ടം ബാറിന് സ്പേസ് നൽകുന്നു */
+    overflow-x: hidden;
+}
+
+/*--- Top App Bar ---*/
+.top-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 5px;
+    background-color: rgba(0, 0, 0, 0.85); 
+    backdrop-filter: blur(10px); 
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+}
+
+.logo {
+    font-size: 24px;
+    font-weight: 700;
+    color: #e50914; /* Netflix Red */
+    letter-spacing: 0.5px;
+    text-shadow: 0 0 10px rgba(229, 9, 20, 0.3); 
+}
+
+.profile-icon {
+    font-size: 18px;
+    background: #141414;
+    border: 1px solid #333;
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.5);
+}
+
+/*--- Netflix Style Search Bar ---*/
+.search-container {
+    display: flex;
+    align-items: center;
+    background-color: rgba(26, 26, 26, 0.8); 
+    backdrop-filter: blur(5px);
+    border-radius: 8px;
+    padding: 2px 10px;
+    margin: 10px 0 25px 0;
+    border: 1px solid #2d2d2d;
+}
+
+#searchBox {
+    flex: 1;
+    background: transparent;
+    border: none;
+    color: #fff;
+    font-size: 15px;
+    padding: 12px;
+    outline: none;
+}
+
+#searchBox::placeholder {
+    color: #757575;
+}
+
+.search-container button {
+    background: transparent;
+    border: none;
+    color: #e50914;
+    font-size: 18px;
+    cursor: pointer;
+    padding: 10px;
+}
+
+/*--- Section Headers ---*/
+.section-title {
+    font-size: 18px;
+    font-weight: 700;
+    margin-bottom: 15px;
+    color: #ffffff;
+    border-left: 4px solid #e50914;
+    padding-left: 10px;
+}
+
+/*--- Movie Grid ---*/
+#movie-container {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr); 
+    gap: 15px;
+}
+
+/*--- Netflix Movie Cards (അനിമേഷനുകൾ ഒഴിവാക്കിയത്) ---*/
+.movie-card {
+    background: rgba(20, 20, 20, 0.8); 
+    backdrop-filter: blur(5px);
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid #222;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+}
+
+/* പ്രൊഫഷണൽ ഗ്ലോ ഇഫക്റ്റ് മാത്രം നിലനിർത്തി, അനിമേഷൻ സ്പീഡ് മാറ്റങ്ങൾ ഒഴിവാക്കി */
+.movie-card:hover {
+    border-color: rgba(0, 102, 255, 0.5); 
+    box-shadow: 0 0 15px rgba(0, 102, 255, 0.15);
+}
+
+.poster-wrapper {
+    position: relative;
+    width: 100%;
+    padding-top: 140%; 
+    overflow: hidden;
+    background-color: #1a1a1a;
+}
+
+.poster-wrapper img {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* പ്ലേ ബട്ടൺ ഓവർലേ - ട്രാൻസിഷൻ സ്പീഡ് ഒഴിവാക്കി ഇൻസ്റ്റന്റ് ആക്കി */
+.play-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.4);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 28px;
+    color: #ffffff;
+    opacity: 0;
+}
+
+.movie-card:hover .play-overlay {
+    opacity: 1;
+}
+
+.movie-details {
+    padding: 10px;
+    background-color: transparent; 
+}
+
+.movie-title {
+    font-size: 14px;
+    font-weight: 500;
+    color: #ffffff;
+    text-align: left;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/*--- Bottom Navigation Bar ---*/
+.bottom-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 65px;
+    background-color: rgba(18, 18, 18, 0.9); 
+    backdrop-filter: blur(15px);
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    z-index: 1000;
+    padding-bottom: env(safe-area-inset-bottom);
+}
+
+.nav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: #757575;
+    cursor: pointer;
+    font-size: 11px;
+    width: 20%;
+}
+
+.nav-icon {
+    font-size: 20px;
+    margin-bottom: 2px;
+}
+
+.nav-label {
+    font-weight: 500;
+}
+
+.nav-item.active {
+    color: #e50914; 
+    text-shadow: 0 0 10px rgba(229, 9, 20, 0.4);
+}
+/*--- Instagram Style Grey Header ---*/
+.creator-title {
+    text-align: center; /* സെന്റർ ആക്കാൻ */
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; /* Instagram Font Style */
+    font-size: 13px; /* വലിപ്പം കുറച്ചു */
+    font-weight: 400; /* ലൈറ്റ് വെയിറ്റ് */
+    letter-spacing: 0.5px; /* അക്ഷരങ്ങൾക്കിടയിലെ അകലം */
+    color: #555555; /* കണ്ണിന് അധികം സ്ട്രെയിൻ തരാത്ത ഡാർക്ക് ഗ്രേ കളർ */
+    text-transform: lowercase; /* ഇൻസ്റ്റാഗ്രാം സ്റ്റൈൽ ലോവർകേസ് ലുക്ക് */
+    margin: 20px 0 10px 0; /* മുകളിലും താഴെയുമുള്ള സ്പേസ് */
+    opacity: 0.6; /* പെട്ടെന്ന് ശ്രദ്ധയിൽ പെടാതിരിക്കാൻ അല്പം മങ്ങിച്ചു */
+}
