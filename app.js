@@ -438,101 +438,44 @@ export function handleLogout() {
 }
 
 // ==========================================
-// 12. 🔥 SEPARATE PAGE DEVELOPER ANNOUNCEMENTS LOGIC
+// 12. 🔥 SEPARATE PAGE DEVELOPER ANNOUNCEMENTS LOGIC (FIXED)
 // ==========================================
 if (window.location.pathname.includes("updates.html")) {
     document.addEventListener("DOMContentLoaded", () => {
         const adminForm = document.getElementById("admin-update-form");
         
-        if (currentUserData) {
+        if (currentUserData && currentUserData.username) {
+            // യൂസർനെയിം കൃത്യമായി ചെറിയ അക്ഷരത്തിലാക്കി സ്പേസ് കളഞ്ഞു ചെക്ക് ചെയ്യുന്നു
             const loggedUsername = currentUserData.username.trim().toLowerCase();
+            
             if (loggedUsername === "infinityspot") {
-                if (adminForm) adminForm.style.display = "block";
+                if (adminForm) {
+                    adminForm.style.display = "block";
+                    console.log("Admin panel displayed for infinityspot");
+                }
+            } else {
+                console.log("Logged in user is not admin:", loggedUsername);
             }
+        } else {
+            console.log("No user data found in localStorage");
         }
 
         fetchAnnouncements();
 
+        // ഇവിടെ ബട്ടൺ ഐഡി 'post-update-btn' തന്നെയാണോ എന്ന് updates.html ഫയലിൽ ഉറപ്പുവരുത്തുക
         const postUpdateBtn = document.getElementById("post-update-btn");
         if (postUpdateBtn) {
-            postUpdateBtn.addEventListener("click", postNewAnnouncement);
+            // പഴയ ലിസണർ ഉണ്ടെങ്കിൽ കൺഫ്യൂഷൻ ഒഴിവാക്കാൻ
+            postUpdateBtn.replaceWith(postUpdateBtn.cloneNode(true));
+            
+            // പുതിയ ലിസണർ ആഡ് ചെയ്യുന്നു
+            document.getElementById("post-update-btn").addEventListener("click", postNewAnnouncement);
         }
     });
 }
 
-async function postNewAnnouncement() {
-    const updateTextInput = document.getElementById("update-text");
-    if (!updateTextInput || !updateTextInput.value.trim()) {
-        alert("Start typing... !");
-        return;
-    }
-
-    try {
-        if (!currentUserData || currentUserData.username.trim().toLowerCase() !== "infinityspot") {
-            alert("You don't have permission!");
-            return;
-        }
-
-        await addDoc(collection(db, "announcements"), {
-            text: updateTextInput.value.trim(),
-            createdAt: new Date(),
-            postedBy: "Developer"
-        });
-
-        updateTextInput.value = "";
-        alert("Your update has been posted");
-        fetchAnnouncements(); 
-
-    } catch (error) {
-        console.error("Error:", error);
-        alert("Failed to post: " + error.message);
-    }
-}
-
-async function fetchAnnouncements() {
-    const updatesList = document.getElementById("updates-list");
-    if (!updatesList) return;
-
-    try {
-        const q = query(collection(db, "announcements"), orderBy("createdAt", "desc"));
-        const querySnapshot = await getDocs(q);
-
-        updatesList.innerHTML = "";
-
-        if (querySnapshot.empty) {
-            updatesList.innerHTML = "<p style='color:#666; text-align:center;'>No updates available!</p>";
-            return;
-        }
-
-        querySnapshot.forEach((docSnap) => {
-            const data = docSnap.data();
-            
-            let displayDate = "";
-            if (data.createdAt) {
-                const t = data.createdAt.toDate ? data.createdAt.toDate() : new Date(data.createdAt.seconds * 1000);
-                displayDate = t.toLocaleDateString() + " " + t.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-            }
-
-            const card = document.createElement("div");
-            card.className = "update-card";
-            card.innerHTML = `
-                <p>${data.text}</p>
-                <div class="update-meta">
-                    <span><i class="fa-solid fa-user-shield"></i> ${data.postedBy}</span>
-                    <span><i class="fa-regular fa-clock"></i> ${displayDate}</span>
-                </div>
-            `;
-            updatesList.appendChild(card);
-        });
-
-    } catch (error) {
-        console.error("Error:", error);
-        updatesList.innerHTML = "<p style='color:red; text-align:center;'>Failed to load!</p>";
-    }
-}
-
 // ==========================================
-// 13. 💬 COMMENT LOGIC (ഫയർബേസ് കണക്ഷൻ)
+// 13. 💬 COMMENT LOGIC (UPDATED & FIXED 🔥)
 // ==========================================
 
 // കമന്റ് ബോക്സ് തുറക്കാനുള്ള ഫങ്ഷൻ
@@ -540,19 +483,14 @@ window.openCommentSheet = function(postId) {
     const sheet = document.getElementById('comment-sheet');
     if (!sheet) return;
 
-    // നിലവിലെ ആക്റ്റീവ് പോസ്റ്റ് ഐഡി ഗ്ലോബൽ ആയി സേവ് ചെയ്യുന്നു (കമന്റ് സബ്മിറ്റ് ചെയ്യാൻ ആവശ്യമുണ്ട്)
     window.currentActivePostId = postId;
 
-    // ഷീറ്റ് ഡിസ്‌പ്ലേ ചെയ്ത് സ്മൂത്ത് ആയി കാണിക്കുന്നു
     sheet.style.display = 'flex';
     setTimeout(() => {
         sheet.classList.add('show');
     }, 10);
 
-    // ആ പോസ്റ്റിന്റെ കമന്റുകൾ ഫയർബേസിൽ നിന്ന് എടുക്കുന്നു
-    if (typeof window.loadCommentsForPost === 'function') {
-        window.loadCommentsForPost(postId);
-    }
+    window.loadCommentsForPost(postId);
 };
 
 // കമന്റുകൾ ലോഡ് ചെയ്യാനുള്ള ഫങ്ഷൻ
@@ -563,7 +501,6 @@ window.loadCommentsForPost = async function(postId) {
     container.innerHTML = "<p style='text-align:center; color:#666;'>Loading comments...</p>";
 
     try {
-        // ഓരോ പോസ്റ്റിന്റെയും ഉള്ളിൽ 'comments' എന്നൊരു സബ്-കളക്ഷൻ ഉണ്ടാക്കി അതിൽ നിന്നാണ് ഡാറ്റ എടുക്കുന്നത്
         const commentsQuery = query(
             collection(db, "posts", postId, "comments"), 
             orderBy("createdAt", "asc")
@@ -583,7 +520,6 @@ window.loadCommentsForPost = async function(postId) {
             const commentItem = document.createElement('div');
             commentItem.className = 'comment-item';
             commentItem.innerHTML = `
-                <img src="${commentData.profilePic || 'https://via.placeholder.com/40/ff1e42/ffffff?text=U'}" class="comment-user-pic">
                 <div class="comment-details">
                     <strong>@${commentData.username || 'anonymous'}</strong>
                     <p>${commentData.text}</p>
@@ -592,12 +528,11 @@ window.loadCommentsForPost = async function(postId) {
             container.appendChild(commentItem);
         });
         
-        // പുതിയ കമന്റുകൾ വരുമ്പോൾ തനിയെ താഴേക്ക് സ്ക്രോൾ ആകാൻ
         container.scrollTop = container.scrollHeight;
 
     } catch (error) {
         console.error("Error loading comments:", error);
-        container.innerHTML = "<p style='color:red; text-align:center;'>Failed to load comments!</p>";
+        container.innerHTML = "<p style='color:red; text-align:center;'>Comments ലോഡ് ചെയ്യാൻ പറ്റിയില്ല!</p>";
     }
 }
 
@@ -606,11 +541,9 @@ document.addEventListener("DOMContentLoaded", () => {
     const sheet = document.getElementById('comment-sheet');
     const closeBtn = document.getElementById('close-comments');
     const overlay = document.querySelector('.sheet-overlay');
-    const submitBtn = document.getElementById('submit-post-btn'); // പോസ്റ്റ് ബട്ടൺ
     const commentInput = document.getElementById('comment-input');
     const submitCommentBtn = document.getElementById('submit-comment-btn');
 
-    // അടയ്ക്കാനുള്ള ഫങ്ഷൻ
     function closeCommentSheet() {
         if (sheet) {
             sheet.classList.remove('show');
@@ -621,30 +554,33 @@ document.addEventListener("DOMContentLoaded", () => {
     if (closeBtn) closeBtn.addEventListener('click', closeCommentSheet);
     if (overlay) overlay.addEventListener('click', closeCommentSheet);
 
-    // കമന്റ് സബ്മിറ്റ് ചെയ്യുമ്പോൾ
     if (submitCommentBtn) {
         submitCommentBtn.addEventListener('click', async () => {
             const text = commentInput.value.trim();
-            const postId = window.currentActivePostId; // നമ്മൾ ഫീഡിൽ ക്ലിക്ക് ചെയ്യുമ്പോൾ സേവ് ആകുന്ന ഐഡി
+            const postId = window.currentActivePostId; 
 
             if (!text) return;
-            if (!postId) { alert("Error: Post ID missing!"); return; }
+            
+            // 🔒 ലോഗിൻ ചെക്കിങ് കുറച്ചുകൂടി സ്ട്രോങ്ങ് ആക്കുന്നു
+            const localUserData = localStorage.getItem("infinity_user");
+            if (!localUserData) {
+                alert("അളിയാ, കമന്റ് ഇടാൻ ആദ്യം ലോഗിൻ ചെയ്യണം!");
+                return;
+            }
+
+            if (!postId) { 
+                alert("Error: Post ID കിട്ടിയില്ല!"); 
+                return; 
+            }
 
             submitCommentBtn.disabled = true;
 
             try {
-                // ലോഗിൻ ചെയ്ത യൂസറുടെ ഡാറ്റ എടുക്കുന്നു
-                const localUserData = localStorage.getItem("infinity_user");
-                let username = "Anonymous";
-                let profilePic = "https://via.placeholder.com/40/ff1e42/ffffff?text=U";
+                const user = JSON.parse(localUserData);
+                const username = user.username || "Anonymous";
+                const profilePic = user.profilePic || "https://via.placeholder.com/40/ff1e42/ffffff?text=U";
 
-                if (localUserData) {
-                    const user = JSON.parse(localUserData);
-                    username = user.username || "Anonymous";
-                    profilePic = user.profilePic || profilePic;
-                }
-
-                // ഫയർബേസിലെ ആ നിർദ്ദിഷ്ട പോസ്റ്റിന്റെ ഉള്ളിലേക്ക് കമന്റ് ആഡ് ചെയ്യുന്നു
+                // ഫയർബേസിലേക്ക് കമന്റ് വിടുന്നു
                 await addDoc(collection(db, "posts", postId, "comments"), {
                     text: text,
                     username: username,
@@ -652,18 +588,19 @@ document.addEventListener("DOMContentLoaded", () => {
                     createdAt: new Date()
                 });
 
-                commentInput.value = ""; // ഇൻപുട്ട് ബോക്സ് ക്ലിയർ ആക്കുന്നു
-                loadCommentsForPost(postId); // കമന്റ് ലിസ്റ്റ് റീഫ്രഷ് ചെയ്യുന്നു
+                commentInput.value = ""; 
+                window.loadCommentsForPost(postId); 
 
             } catch (error) {
-                console.error("Error posting comment:", error);
-                alert("You are not allowed to comment!");
+                console.error("Detailed error posting comment:", error);
+                alert("കമന്റ് ഇടാൻ പറ്റിയില്ല! കാരണം: " + error.message);
             } finally {
                 submitCommentBtn.disabled = false;
             }
         });
     }
 });
+
 
 function triggerAnnouncement(hasNew) {
     const bell = document.getElementById('announcement-bell');
