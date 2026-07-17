@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="ml">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>InfinitySpot - Updates</title>
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+    /* മൊത്തത്തിലുള്ള പേജ് സ്റ്റൈൽ */
+    body {
+        margin: 0;
+        padding: 0;
+        background-color: #000; /* പക്കാ ബ്ലാക്ക് തീം */
+        color: #fff;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    /* ടോപ്പ് ഹെഡർ ബാർ */
+    .header {
+        display: flex;
+        align-items: center;
+        padding: 15px 20px;
+        border-bottom: 1px solid #222; /* ലൈറ്റ് ബോർഡർ */
+        position: sticky;
+        top: 0;
+        background: rgba(0, 0, 0, 0.8);
+        backdrop-filter: blur(10px); /* ബ്ലർ ഇഫക്ട് */
+        z-index: 100;
+    }
+
+    /* ബാക്ക് ബട്ടൺ */
+    .back-btn {
+        color: #fff;
+        text-decoration: none;
+        font-size: 1.2rem;
+        margin-right: 15px;
+        transition: color 0.2s;
+    }
+    .back-btn:hover {
+        color: #ff3366; /* ഹോവർ ചെയ്യുമ്പോൾ ഇൻഫിനിറ്റി പിങ്ക് കളർ */
+    }
+
+    /* മെയിൻ ബോക്സ് */
+    .container {
+        max-width: 600px;
+        margin: 20px auto;
+        padding: 0 15px;
+    }
+
+    /* 🔒 ഡെവലപ്പർ ഫോം (നിനക്ക് മാത്രം കാണുന്നത്) */
+    #admin-update-form {
+        background: #111;
+        padding: 15px;
+        border-radius: 12px;
+        border: 1px solid #222;
+        margin-bottom: 25px;
+        box-shadow: 0 4px 12px rgba(255, 51, 102, 0.1); /* ചെറിയൊരു പിങ്ക് ഗ്ലോ */
+    }
+
+    /* എഴുതുന്ന ടെക്സ്റ്റ് ഏരിയ */
+    #update-text {
+        width: 100%;
+        height: 90px;
+        background: #1a1a1a;
+        color: #fff;
+        border: 1px solid #333;
+        padding: 12px;
+        border-radius: 8px;
+        resize: none;
+        box-sizing: border-box;
+        font-size: 0.95rem;
+    }
+    #update-text:focus {
+        outline: none;
+        border-color: #8e8e93; /* ക്ലിക്ക് ചെയ്യുമ്പോൾ ബോർഡർ പിങ്ക് ആകും */
+    }
+
+    /* അപ്‌ഡേറ്റ് പോസ്റ്റ് ചെയ്യുന്ന ബട്ടൺ */
+    #post-update-btn {
+        background: #ff1e42;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 8px;
+        cursor: pointer;
+        margin-top: 10px;
+        font-weight: bold;
+        width: 100%;
+        transition: background 0.2s, transform 0.1s;
+    }
+    #post-update-btn:hover {
+        background: #e02454;
+    }
+    #post-update-btn:active {
+        transform: scale(0.98); /* ക്ലിക്ക് ചെയ്യുമ്പോൾ ചെറിയൊരു അനിമേഷൻ */
+    }
+
+    /* 📣 യൂസർമാർക്ക് കാണുന്ന അപ്‌ഡേറ്റ് ബോക്സുകൾ (Cards) */
+    .update-card {
+        background: #111;
+        padding: 15px;
+        margin-bottom: 15px;
+        border-radius: 12px;
+        border: 1px solid #222;
+        border-left: 4px solid #ff1e42; /* ഇടത് വശത്ത് പിങ്ക് ബോർഡർ (മാസ്സ് ലുക്ക്) */
+        transition: transform 0.2s;
+    }
+    .update-card:hover {
+        transform: translateY(-2px); /* മുകളിലേക്ക് ചെറുതായി പൊന്തി നിൽക്കും */
+    }
+    .update-card p {
+        margin: 0 0 10px 0;
+        line-height: 1.5;
+        font-size: 1rem;
+        word-wrap: break-word;
+    }
+
+    /* ഡേറ്റും സമയവും കാണിക്കുന്ന ഭാഗം */
+    .update-meta {
+        display: flex;
+        justify-content: space-between;
+        color: #666;
+        font-size: 0.8rem;
+    }
+    .update-meta i {
+        margin-right: 4px;
+    }
+</style>
+
+</head>
+<body>
+
+    <div class="header">
+        <a href="home.html" class="back-btn"><i class="fa-solid fa-arrow-left"></i></a>
+        <span style="font-weight: bold; font-size: 1.2rem;">Updates & Announcements</span>
+    </div>
+
+    <div class="container">
+        <!-- 🔒 infinityspot-ന് മാത്രം കാണാനുള്ള ഫോം -->
+        <div id="admin-update-form" style="display: none;">
+            <textarea id="update-text" placeholder="വരാൻ പോകുന്ന പുതിയ അപ്‌ഡേറ്റുകൾ ഇവിടെ എഴുതൂ അളിയാ..."></textarea>
+            <button id="post-update-btn">Post Update</button>
+        </div>
+
+        <!-- ലിസ്റ്റ് ഇവിടെ വരും -->
+        <div id="updates-list">
+            <p style="color: #666; text-align: center;">Loading updates...</p>
+        </div>
+    </div>
+
+    <!-- JS കണക്ട് ചെയ്യുന്നു (Module ആയിട്ടാണ് കൊടുക്കേണ്ടത് കാരണം app.js-ൽ import/export ഉണ്ട്) -->
+    <script type="module" src="app.js"></script>
+</body>
+</html>
