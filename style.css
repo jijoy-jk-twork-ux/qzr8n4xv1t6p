@@ -321,3 +321,170 @@ body {
 .hidden {
     display: none !important;
 }
+
+/* ==========================================
+   💬 COMMENT BOTTOM SHEET CSS
+   ========================================== */
+.comment-sheet {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 1000;
+    display: none; /* ആദ്യമേ കാണിക്കില്ല */
+    justify-content: flex-end;
+    flex-direction: column;
+}
+
+/* കമന്റ് ഓപ്പൺ ആകുമ്പോൾ ഇത് ഡിസ്‌പ്ലേ ചെയ്യും */
+.comment-sheet.show {
+    display: flex;
+}
+
+.sheet-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.7); /* ബാക്ക്ഗ്രൗണ്ട് ഇരുണ്ടതാക്കാൻ */
+}
+
+.sheet-content {
+    position: relative;
+    background: #121212;
+    border-top-left-radius: 20px;
+    border-top-right-radius: 20px;
+    height: 70vh;
+    display: flex;
+    flex-direction: column;
+    transform: translateY(100%);
+    transition: transform 0.3s ease-out;
+    border-top: 1px solid #222;
+    z-index: 1001;
+}
+
+/* ഷീറ്റ് മുകളിലേക്ക് വരാൻ */
+.comment-sheet.show .sheet-content {
+    transform: translateY(0);
+}
+
+.sheet-header {
+    padding: 15px;
+    text-align: center;
+    border-bottom: 1px solid #222;
+    position: relative;
+}
+
+.drag-handle {
+    width: 40px;
+    height: 4px;
+    background: #333;
+    border-radius: 2px;
+    margin: 0 auto 10px auto;
+}
+
+.sheet-header h3 {
+    margin: 0;
+    font-size: 1.1rem;
+    color: #fff;
+}
+
+.close-btn {
+    position: absolute;
+    right: 15px;
+    top: 12px;
+    background: none;
+    border: none;
+    color: #fff;
+    font-size: 1.8rem;
+    cursor: pointer;
+}
+
+.comments-container {
+    flex: 1;
+    overflow-y: auto;
+    padding: 15px;
+}
+
+.comment-item {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 15px;
+    align-items: flex-start;
+}
+
+.comment-user-pic {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.comment-details {
+    background: #1c1c1e;
+    padding: 10px;
+    border-radius: 12px;
+    flex: 1;
+}
+
+.comment-details strong {
+    font-size: 0.85rem;
+    color: #fff;
+    display: block;
+    margin-bottom: 3px;
+}
+
+.comment-details p {
+    margin: 0;
+    font-size: 0.9rem;
+    color: #ddd;
+}
+
+.no-comments {
+    text-align: center;
+    color: #666;
+    margin-top: 30px;
+}
+
+.comment-input-area {
+    padding: 15px;
+    border-top: 1px solid #222;
+    display: flex;
+    gap: 10px;
+    background: #121212;
+}
+
+#comment-input {
+    flex: 1;
+    background: #1c1c1e;
+    border: 1px solid #333;
+    padding: 12px;
+    border-radius: 20px;
+    color: #fff;
+}
+
+#comment-input:focus {
+    outline: none;
+    border-color: #ff1e42;
+}
+
+#submit-comment-btn {
+    background: none;
+    border: none;
+    color: #ff1e42;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+@keyframes blink {
+    0% { opacity: 1; }
+    50% { opacity: 0.3; }
+    100% { opacity: 1; }
+}
+
+.blink-me {
+    animation: blink 1s infinite;
+    color: #ff3e3e; /* ബ്ലിങ്ക് ചെയ്യുമ്പോൾ ഒരു നിറം വരാൻ */
+}
