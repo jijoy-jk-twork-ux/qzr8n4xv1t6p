@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="ml">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JJ Empire</title>
+    <style>
+        /* പ്രീമിയം ഡാർക്ക് തീം ഡിസൈൻ */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: #0d0d0d; /* ആഴമേറിയ കറുപ്പ് നിറം */
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: 'Montserrat', 'Segoe UI', sans-serif;
+            overflow: hidden;
+        }
+
+        /* പ്രധാന ലോഡർ കണ്ടെയ്നർ */
+        .loader-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* പ്രീമിയം ഗ്ലോയിംഗ് സർക്കിൾ ലോഡർ */
+        .premium-loader {
+            position: relative;
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(0, 255, 204, 0.15) 0%, transparent 70%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 30px;
+        }
+
+        .premium-loader::before,
+        .premium-loader::after {
+            content: '';
+            position: absolute;
+            border-radius: 50%;
+            border: 3px solid transparent;
+        }
+
+        /* പുറമെയുള്ള തിരിയുന്ന റിംഗ് */
+        .premium-loader::before {
+            width: 100%;
+            height: 100%;
+            border-top-color: #00ffcc; /* നിയോൺ ടർക്കോയ്‌സ് */
+            border-bottom-color: #00ffcc;
+            animation: spin 2s cubic-bezier(0.68, -0.55, 0.27, 1.55) infinite;
+        }
+
+        /* ഉള്ളിലുള്ള തിരിയുന്ന റിംഗ് */
+        .premium-loader::after {
+            width: 70%;
+            height: 70%;
+            border-left-color: #ff007f; /* നിയോൺ പിങ്ക് (ഒരു പ്രീമിയം വൈബ് നൽകാൻ) */
+            border-right-color: #ff007f;
+            animation: spin-reverse 1.5s linear infinite;
+        }
+
+        /* ലോഡിങ് ടെക്സ്റ്റ് സ്റ്റൈൽ */
+        .loading-text {
+            color: #ffffff;
+            font-size: 14px;
+            font-weight: 500;
+            letter-spacing: 4px;
+            text-transform: uppercase;
+            opacity: 0.8;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        /* സ്പിൻ ആനിമേഷനുകൾ */
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @keyframes spin-reverse {
+            0% { transform: rotate(360deg); }
+            100% { transform: rotate(0deg); }
+        }
+
+        /* ശ്വസിക്കുന്നതുപോലെയുള്ള പൾസിംഗ് ആനിമേഷൻ */
+        @keyframes pulse {
+            0%, 100% { opacity: 0.5; letter-spacing: 4px; }
+            50% { opacity: 1; letter-spacing: 6px; }
+        }
+        .sub-text {
+            color: #a0a0a0; /* ലൈറ്റ് ഗ്രേ പ്രീമിയം കളർ */
+            font-size: 12px;
+            font-weight: 400;
+            letter-spacing: 1px;
+            opacity: 0.7;
+            animation: pulse-delayed 2s ease-in-out infinite;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="loader-wrapper">
+        <!-- പ്രീമിയം ആനിമേറ്റഡ് സർക്കിൾ -->
+        <div class="premium-loader"></div>
+        
+        <!-- ബ്രാൻഡ് / ലോഡിങ് ടെക്സ്റ്റ് -->
+        <div class="loading-text">Coming soon!</div>
+        <div class="sub-text">Updates will appear in the bell icon on your home screen</div>
+    </div>
+
+    <script>
+    
+        const waitingTime = 8000; 
+
+        setTimeout(() => {
+            // നിങ്ങളുടെ ഹോം പേജിന്റെ പേര് ഇവിടെ നൽകുക (ഉദാഹരണത്തിന്: home.html)
+            window.location.href = "home.html"; 
+        }, waitingTime);
+    </script>
+
+</body>
+</html>
