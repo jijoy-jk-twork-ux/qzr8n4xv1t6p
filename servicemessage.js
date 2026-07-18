@@ -18,7 +18,7 @@ messaging.onBackgroundMessage((payload) => {
   const notificationTitle = payload.notification.title;
   const notificationOptions = {
     body: payload.notification.body,
-    icon: '/infinity.png' // ആപ്പിന്റെ ലോഗോ
+    icon: '/Infinity.png' // ആപ്പിന്റെ ലോഗോ
   };
 
   self.registration.showNotification(notificationTitle, notificationOptions);
