@@ -292,7 +292,7 @@ async function fetchAndDisplayPosts() {
 // ==========================================
 // 7. LIKE BUTTON LOGIC (വൺ യൂസർ, വൺ ലൈക്ക് സിസ്റ്റം)
 // ==========================================
-async function setupLikeButton(postElement, postId) {
+async function setupLikeButton(postElement, postId, postData) {
     const likeIcon = postElement.querySelector('.like-icon');
     const likesCountSpan = postElement.querySelector('.likes-count');
     
@@ -302,56 +302,81 @@ async function setupLikeButton(postElement, postId) {
     const localUserData = localStorage.getItem("infinity_user");
     
     let currentUserId = "";
-    let storageKey = "";
-    let hasLiked = false;
-
     if (localUserData) {
         const currentUser = JSON.parse(localUserData);
         currentUserId = currentUser.uid;
-        storageKey = `liked_${currentUserId}_${postId}`;
-        hasLiked = localStorage.getItem(storageKey) === 'true';
     }
 
+    // 1. 🔄 പേജ് ലോഡ് ചെയ്യുമ്പോൾ ലൈക്ക് കൗണ്ടും ബട്ടണിന്റെ കളറും സെറ്റ് ചെയ്യുക
+    // ഡാറ്റാബേസിൽ നിന്നുള്ള 'likes' എന്ന അറേയിൽ ഈ യൂസറുടെ UID ഉണ്ടോ എന്ന് നോക്കുന്നു
+    const likedUsersList = postData.likes || []; 
+    const totalLikes = postData.likeCount || likedUsersList.length || 0;
+    
+    likesCountSpan.innerText = `${totalLikes} likes`;
+
+    let hasLiked = currentUserId && likedUsersList.includes(currentUserId);
+
+    // യൂസർ നേരത്തെ ലൈക്ക് ചെയ്തിട്ടുണ്ടെങ്കിൽ ബട്ടൺ ചുവപ്പിക്കുക
+    if (hasLiked) {
+        likeIcon.classList.remove('fa-regular');
+        likeIcon.classList.add('fa-solid');
+        likeIcon.style.color = '#ff3366';
+    } else {
+        likeIcon.classList.remove('fa-solid');
+        likeIcon.classList.add('fa-regular');
+        likeIcon.style.color = 'white';
+    }
+
+    // 2. 🖱️ ക്ലിക്ക് ചെയ്യുമ്പോഴുള്ള ലോജിക്
     likeIcon.addEventListener('click', async () => {
-        if (!localUserData) {
+        if (!currentUserId) {
             alert("Please log in to like this post!");
             return;
         }
 
-        let currentLikes = parseInt(likesCountSpan.innerText) || 0;
-        
+        // പെട്ടെന്ന് UI മാറാൻ വേണ്ടി (Optimistic UI Update)
+        let displayLikes = parseInt(likesCountSpan.innerText) || 0;
+
         try {
             if (!hasLiked) {
+                // UI മാറ്റുക (Red ആക്കുക)
                 likeIcon.classList.remove('fa-regular');
                 likeIcon.classList.add('fa-solid');
                 likeIcon.style.color = '#ff3366';
-                
-                currentLikes++;
-                likesCountSpan.innerText = `${currentLikes} likes`;
-                
+                likesCountSpan.innerText = `${displayLikes + 1} likes`;
                 hasLiked = true;
-                localStorage.setItem(storageKey, 'true');
 
-                await updateDoc(postDocRef, { likes: currentLikes });
+                // 🔥 ഫയർബേസ് റൂൾസ് അനുസരിച്ച് സുരക്ഷിതമായി അപ്ഡേറ്റ് ചെയ്യുക
+                await updateDoc(postDocRef, {
+                    likeCount: increment(1),       // കൗണ്ട് 1 കൂട്ടും
+                    likes: arrayUnion(currentUserId) // യൂസറുടെ UID ലിസ്റ്റിലേക്ക് ചേർക്കും
+                });
+
             } else {
+                // UI മാറ്റുക (White ആക്കുക)
                 likeIcon.classList.remove('fa-solid');
                 likeIcon.classList.add('fa-regular');
-                likeIcon.style.color = 'white'; 
-                
-                currentLikes--;
-                likesCountSpan.innerText = `${currentLikes} likes`;
-                
+                likeIcon.style.color = 'white';
+                likesCountSpan.innerText = `${displayLikes - 1} likes`;
                 hasLiked = false;
-                localStorage.removeItem(storageKey);
 
-                await updateDoc(postDocRef, { likes: currentLikes });
+                // 🔥 ഫയർബേസ് റൂൾസ് അനുസരിച്ച് ലൈക്ക് പിൻവലിക്കുക
+                await updateDoc(postDocRef, {
+                    likeCount: increment(-1),       // കൗണ്ട് 1 കുറയ്ക്കും
+                    likes: arrayRemove(currentUserId) // യൂസറുടെ UID ലിസ്റ്റിൽ നിന്ന് കളയും
+                });
             }
         } catch (error) {
-            console.error("Like അപ്‌ഡേറ്റ് ചെയ്യാൻ പറ്റിയില്ല:", error);
+            // എന്തെങ്കിലും എറർ ഉണ്ടായാൽ പഴയ പടിയാക്കുക
+            hasLiked = !hasLiked;
+            likesCountSpan.innerText = `${displayLikes} likes`;
+            likeIcon.classList.toggle('fa-solid');
+            likeIcon.classList.toggle('fa-regular');
+            likeIcon.style.color = hasLiked ? '#ff3366' : 'white';
+            console.error("Like ചെയ്യുമ്പോൾ പ്രശ്നമുണ്ടായി അളിയാ:", error);
         }
     });
 }
-
 // ==========================================
 // 8. PERMANENT DELETE POST LOGIC
 // ==========================================
