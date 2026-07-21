@@ -5,7 +5,10 @@ const CLOUDINARY_URL = 'https://api.cloudinary.com/v1_1/wbmr3lkx/upload';
 const CLOUDINARY_UPLOAD_PRESET = 'Infinity_preset'; 
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-import { getFirestore, collection, addDoc, getDocs, query, orderBy, doc, deleteDoc, setDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+import { 
+    getFirestore, collection, addDoc, getDocs, query, orderBy, 
+    doc, deleteDoc, setDoc, updateDoc, increment, arrayUnion, arrayRemove 
+} from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 import { getAuth, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js"; 
 
 const firebaseConfig = {
@@ -37,7 +40,7 @@ if (!userDataString) {
 }
 
 // ==========================================
-// 3. HTML ELEMENTS SELECTORS (ഹോം പേജിൽ മാത്രം വർക്ക് ചെയ്യാൻ)
+// 3. HTML ELEMENTS SELECTORS
 // ==========================================
 const uploadBtn = document.getElementById('upload-btn');
 const uploadModal = document.getElementById('upload-modal');
@@ -50,6 +53,11 @@ const videoPreview = document.getElementById('video-preview');
 const removeFileBtn = document.getElementById('remove-file-btn');
 const submitPostBtn = document.getElementById('submit-post-btn');
 const captionInput = document.getElementById('caption-input');
+
+// 💡 Native WebView-ൽ ഗാലറി നിർബന്ധമായി ഓപ്പൺ ആകാനുള്ള കോഡ്
+if (fileInput) {
+    fileInput.setAttribute("accept", "image/*,video/*");
+}
 
 // ==========================================
 // 4. MODAL & PREVIEW CONTROLS
@@ -78,17 +86,21 @@ if (fileInput) {
             const reader = new FileReader();
 
             reader.onload = function(e) {
-                dropArea.classList.add('hidden'); 
-                previewContainer.classList.remove('hidden'); 
+                if (dropArea) dropArea.classList.add('hidden'); 
+                if (previewContainer) previewContainer.classList.remove('hidden'); 
 
                 if (fileType.startsWith('image/')) {
-                    imagePreview.src = e.target.result;
-                    imagePreview.classList.remove('hidden');
-                    videoPreview.classList.add('hidden');
+                    if (imagePreview) {
+                        imagePreview.src = e.target.result;
+                        imagePreview.classList.remove('hidden');
+                    }
+                    if (videoPreview) videoPreview.classList.add('hidden');
                 } else if (fileType.startsWith('video/')) {
-                    videoPreview.src = e.target.result;
-                    videoPreview.classList.remove('hidden');
-                    imagePreview.classList.add('hidden');
+                    if (videoPreview) {
+                        videoPreview.src = e.target.result;
+                        videoPreview.classList.remove('hidden');
+                    }
+                    if (imagePreview) imagePreview.classList.add('hidden');
                 }
             }
             reader.readAsDataURL(file);
@@ -119,11 +131,11 @@ function resetAndCloseModal() {
 // ==========================================
 if (submitPostBtn) {
     submitPostBtn.addEventListener('click', async () => {
-        const file = fileInput.files[0];
-        const caption = captionInput.value;
+        const file = fileInput ? fileInput.files[0] : null;
+        const caption = captionInput ? captionInput.value : '';
 
         if (!file) {
-            alert("Please select a photo!");
+            alert("Please select a photo or video!");
             return;
         }
 
@@ -186,7 +198,8 @@ async function savePostToFirebase(mediaUrl, mediaType, caption, publicId) {
             caption: caption,
             public_id: publicId,
             createdAt: new Date(),
-            likes: 0,
+            likes: [], // അറേ ആയി സെറ്റ് ചെയ്യുന്നു
+            likeCount: 0,
             userId: userId,
             username: username,
             profilePic: profilePic
@@ -198,11 +211,11 @@ async function savePostToFirebase(mediaUrl, mediaType, caption, publicId) {
 }
 
 // ==========================================
-// 6. FETCH & DISPLAY POSTS (മിസ്സായ ഫങ്ഷൻ തിരികെ ചേർത്തു 🔥)
+// 6. FETCH & DISPLAY POSTS
 // ==========================================
 async function fetchAndDisplayPosts() {
     const feedContainer = document.querySelector('.feed-container');
-    if (!feedContainer) return; // ഹോം പേജിൽ അല്ലങ്കിൽ ഇവിടെ വെച്ച് നിർത്തും
+    if (!feedContainer) return; 
 
     try {
         const postsQuery = query(collection(db, "posts"), orderBy("createdAt", "desc"));
@@ -237,46 +250,32 @@ async function fetchAndDisplayPosts() {
                 deleteIconHtml = `<i class="fa-regular fa-trash-can delete-icon" style="margin-left: auto; cursor: pointer; color: #ff4d4d;" data-id="${postId}"></i>`;
             }
 
-            // 🔒 പേജ് ലോഡ് ആകുമ്പോൾ തന്നെ ലൈക്ക് സ്റ്റാറ്റസ് ചെക്ക് ചെയ്യുന്നു
-            let heartClass = "fa-regular";
-            let heartColor = "white";
-            if (currentUserId !== "") {
-                const storageKey = `liked_${currentUserId}_${postId}`;
-                if (localStorage.getItem(storageKey) === 'true') {
-                    heartClass = "fa-solid";
-                    heartColor = "#ff3366";
-                }
-            }
-
             const postElement = document.createElement('article');
             postElement.classList.add('post');
             postElement.innerHTML = `
-    <div class="post-header">
-        <img src="${postData.profilePic || 'https://via.placeholder.com/40/ff1e42/ffffff?text=U'}" alt="Profile" class="profile-pic">
-        <span class="username">${postData.username || 'Anonymous User'}</span>
-        ${deleteIconHtml}
-    </div>
-    <div class="post-media">
-        ${mediaHtml}
-    </div>
-    <div class="post-actions" style="display: flex; gap: 15px; align-items: center; padding: 10px 0 5px 0;">
-        <i class="${heartClass} fa-heart like-icon" style="cursor: pointer; font-size: 1.4rem; color: ${heartColor};"></i>
-        
-        <!-- 💬 ഇവിടെയാണ് മാറ്റം വരുത്തിയത്: post.id അല്ലെങ്കിൽ doc.id അല്ല, 'postId' എന്നാണ് നിന്റെ വേരിയബിൾ പേര് -->
-        <i class="fa-regular fa-comment comment-icon" style="cursor: pointer; font-size: 1.4rem;" onclick="openCommentSheet('${postId}')"></i>
-    </div>
-    <div class="post-details">
-        <span class="likes-count" style="font-weight: bold; display: block; margin-bottom: 5px; font-size: 0.9rem; color: #fff;">${postData.likes || 0} likes</span>
-        <p><strong>${postData.username || 'Anonymous User'}</strong> ${postData.caption || ""}</p>
-    </div>
-`;
+                <div class="post-header">
+                    <img src="${postData.profilePic || 'https://via.placeholder.com/40/ff1e42/ffffff?text=U'}" alt="Profile" class="profile-pic">
+                    <span class="username">${postData.username || 'Anonymous User'}</span>
+                    ${deleteIconHtml}
+                </div>
+                <div class="post-media">
+                    ${mediaHtml}
+                </div>
+                <div class="post-actions" style="display: flex; gap: 15px; align-items: center; padding: 10px 0 5px 0;">
+                    <i class="fa-regular fa-heart like-icon" style="cursor: pointer; font-size: 1.4rem; color: white;"></i>
+                    <i class="fa-regular fa-comment comment-icon" style="cursor: pointer; font-size: 1.4rem;" onclick="openCommentSheet('${postId}')"></i>
+                </div>
+                <div class="post-details">
+                    <span class="likes-count" style="font-weight: bold; display: block; margin-bottom: 5px; font-size: 0.9rem; color: #fff;">0 likes</span>
+                    <p><strong>${postData.username || 'Anonymous User'}</strong> ${postData.caption || ""}</p>
+                </div>
+            `;
             feedContainer.appendChild(postElement);
 
-            // ലൈക്ക് ഫങ്ഷൻ കണക്ട് ചെയ്യുന്നു
-            setupLikeButton(postElement, postId);
+            // 💡 പോസ്റ്റ് ഡാറ്റ കൂടി ഇവിടെ പാസ്സ് ചെയ്യുന്നു (ലൈക്ക് വർക്ക് ചെയ്യാൻ)
+            setupLikeButton(postElement, postId, postData);
         });
 
-        // ഡിലീറ്റ് ഇവന്റ് ലിസണർ ബൈൻഡ് ചെയ്യുന്നു
         document.querySelectorAll('.delete-icon').forEach(button => {
             button.addEventListener('click', function() {
                 const id = this.getAttribute('data-id');
@@ -290,7 +289,7 @@ async function fetchAndDisplayPosts() {
 }
 
 // ==========================================
-// 7. LIKE BUTTON LOGIC (വൺ യൂസർ, വൺ ലൈക്ക് സിസ്റ്റം)
+// 7. LIKE BUTTON LOGIC (FIXED 🔥)
 // ==========================================
 async function setupLikeButton(postElement, postId, postData) {
     const likeIcon = postElement.querySelector('.like-icon');
@@ -307,16 +306,15 @@ async function setupLikeButton(postElement, postId, postData) {
         currentUserId = currentUser.uid;
     }
 
-    // 1. 🔄 പേജ് ലോഡ് ചെയ്യുമ്പോൾ ലൈക്ക് കൗണ്ടും ബട്ടണിന്റെ കളറും സെറ്റ് ചെയ്യുക
-    // ഡാറ്റാബേസിൽ നിന്നുള്ള 'likes' എന്ന അറേയിൽ ഈ യൂസറുടെ UID ഉണ്ടോ എന്ന് നോക്കുന്നു
-    const likedUsersList = postData.likes || []; 
-    const totalLikes = postData.likeCount || likedUsersList.length || 0;
+    // ലൈക്ക് അറേ കൈകാര്യം ചെയ്യുന്നു
+    const likedUsersList = Array.isArray(postData.likes) ? postData.likes : []; 
+    const totalLikes = postData.likeCount !== undefined ? postData.likeCount : likedUsersList.length;
     
     likesCountSpan.innerText = `${totalLikes} likes`;
 
     let hasLiked = currentUserId && likedUsersList.includes(currentUserId);
 
-    // യൂസർ നേരത്തെ ലൈക്ക് ചെയ്തിട്ടുണ്ടെങ്കിൽ ബട്ടൺ ചുവപ്പിക്കുക
+    // പേജ് ലോഡാകുമ്പോൾ കളർ സെറ്റ് ചെയ്യുന്നു
     if (hasLiked) {
         likeIcon.classList.remove('fa-regular');
         likeIcon.classList.add('fa-solid');
@@ -327,56 +325,51 @@ async function setupLikeButton(postElement, postId, postData) {
         likeIcon.style.color = 'white';
     }
 
-    // 2. 🖱️ ക്ലിക്ക് ചെയ്യുമ്പോഴുള്ള ലോജിക്
+    // ക്ലിക്ക് ചെയ്യുമ്പോൾ
     likeIcon.addEventListener('click', async () => {
         if (!currentUserId) {
             alert("Please log in to like this post!");
             return;
         }
 
-        // പെട്ടെന്ന് UI മാറാൻ വേണ്ടി (Optimistic UI Update)
         let displayLikes = parseInt(likesCountSpan.innerText) || 0;
 
         try {
             if (!hasLiked) {
-                // UI മാറ്റുക (Red ആക്കുക)
                 likeIcon.classList.remove('fa-regular');
                 likeIcon.classList.add('fa-solid');
                 likeIcon.style.color = '#ff3366';
                 likesCountSpan.innerText = `${displayLikes + 1} likes`;
                 hasLiked = true;
 
-                // 🔥 ഫയർബേസ് റൂൾസ് അനുസരിച്ച് സുരക്ഷിതമായി അപ്ഡേറ്റ് ചെയ്യുക
                 await updateDoc(postDocRef, {
-                    likeCount: increment(1),       // കൗണ്ട് 1 കൂട്ടും
-                    likes: arrayUnion(currentUserId) // യൂസറുടെ UID ലിസ്റ്റിലേക്ക് ചേർക്കും
+                    likeCount: increment(1),
+                    likes: arrayUnion(currentUserId)
                 });
 
             } else {
-                // UI മാറ്റുക (White ആക്കുക)
                 likeIcon.classList.remove('fa-solid');
                 likeIcon.classList.add('fa-regular');
                 likeIcon.style.color = 'white';
-                likesCountSpan.innerText = `${displayLikes - 1} likes`;
+                likesCountSpan.innerText = `${Math.max(0, displayLikes - 1)} likes`;
                 hasLiked = false;
 
-                // 🔥 ഫയർബേസ് റൂൾസ് അനുസരിച്ച് ലൈക്ക് പിൻവലിക്കുക
                 await updateDoc(postDocRef, {
-                    likeCount: increment(-1),       // കൗണ്ട് 1 കുറയ്ക്കും
-                    likes: arrayRemove(currentUserId) // യൂസറുടെ UID ലിസ്റ്റിൽ നിന്ന് കളയും
+                    likeCount: increment(-1),
+                    likes: arrayRemove(currentUserId)
                 });
             }
         } catch (error) {
-            // എന്തെങ്കിലും എറർ ഉണ്ടായാൽ പഴയ പടിയാക്കുക
             hasLiked = !hasLiked;
             likesCountSpan.innerText = `${displayLikes} likes`;
             likeIcon.classList.toggle('fa-solid');
             likeIcon.classList.toggle('fa-regular');
             likeIcon.style.color = hasLiked ? '#ff3366' : 'white';
-            console.error("Like ചെയ്യുമ്പോൾ പ്രശ്നമുണ്ടായി അളിയാ:", error);
+            console.error("Like Error:", error);
         }
     });
 }
+
 // ==========================================
 // 8. PERMANENT DELETE POST LOGIC
 // ==========================================
@@ -463,47 +456,8 @@ export function handleLogout() {
 }
 
 // ==========================================
-// 12. 🔥 SEPARATE PAGE DEVELOPER ANNOUNCEMENTS LOGIC (FIXED)
+// 12. COMMENT LOGIC
 // ==========================================
-if (window.location.pathname.includes("updates.html")) {
-    document.addEventListener("DOMContentLoaded", () => {
-        const adminForm = document.getElementById("admin-update-form");
-        
-        if (currentUserData && currentUserData.username) {
-            // യൂസർനെയിം കൃത്യമായി ചെറിയ അക്ഷരത്തിലാക്കി സ്പേസ് കളഞ്ഞു ചെക്ക് ചെയ്യുന്നു
-            const loggedUsername = currentUserData.username.trim().toLowerCase();
-            
-            if (loggedUsername === "infinityspot") {
-                if (adminForm) {
-                    adminForm.style.display = "block";
-                    console.log("Admin panel displayed for infinityspot");
-                }
-            } else {
-                console.log("Logged in user is not admin:", loggedUsername);
-            }
-        } else {
-            console.log("No user data found in localStorage");
-        }
-
-        fetchAnnouncements();
-
-        // ഇവിടെ ബട്ടൺ ഐഡി 'post-update-btn' തന്നെയാണോ എന്ന് updates.html ഫയലിൽ ഉറപ്പുവരുത്തുക
-        const postUpdateBtn = document.getElementById("post-update-btn");
-        if (postUpdateBtn) {
-            // പഴയ ലിസണർ ഉണ്ടെങ്കിൽ കൺഫ്യൂഷൻ ഒഴിവാക്കാൻ
-            postUpdateBtn.replaceWith(postUpdateBtn.cloneNode(true));
-            
-            // പുതിയ ലിസണർ ആഡ് ചെയ്യുന്നു
-            document.getElementById("post-update-btn").addEventListener("click", postNewAnnouncement);
-        }
-    });
-}
-
-// ==========================================
-// 13. 💬 COMMENT LOGIC (UPDATED & FIXED 🔥)
-// ==========================================
-
-// കമന്റ് ബോക്സ് തുറക്കാനുള്ള ഫങ്ഷൻ
 window.openCommentSheet = function(postId) {
     const sheet = document.getElementById('comment-sheet');
     if (!sheet) return;
@@ -518,7 +472,6 @@ window.openCommentSheet = function(postId) {
     window.loadCommentsForPost(postId);
 };
 
-// കമന്റുകൾ ലോഡ് ചെയ്യാനുള്ള ഫങ്ഷൻ
 window.loadCommentsForPost = async function(postId) {
     const container = document.getElementById('comments-container');
     if (!container) return;
@@ -561,7 +514,6 @@ window.loadCommentsForPost = async function(postId) {
     }
 }
 
-// കമന്റ് ഷീറ്റ് കൺട്രോളുകളും സബ്മിറ്റ് ബട്ടണും വർക്ക് ആക്കാൻ
 document.addEventListener("DOMContentLoaded", () => {
     const sheet = document.getElementById('comment-sheet');
     const closeBtn = document.getElementById('close-comments');
@@ -586,15 +538,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
             if (!text) return;
             
-            // 🔒 ലോഗിൻ ചെക്കിങ് കുറച്ചുകൂടി സ്ട്രോങ്ങ് ആക്കുന്നു
             const localUserData = localStorage.getItem("infinity_user");
             if (!localUserData) {
-                alert("അളിയാ, കമന്റ് ഇടാൻ ആദ്യം ലോഗിൻ ചെയ്യണം!");
+                alert("കമന്റ് ഇടാൻ ആദ്യം ലോഗിൻ ചെയ്യണം!");
                 return;
             }
 
             if (!postId) { 
-                alert("Error: Post ID കിട്ടിയില്ല!"); 
+                alert("Error: "); 
                 return; 
             }
 
@@ -605,7 +556,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 const username = user.username || "Anonymous";
                 const profilePic = user.profilePic || "https://via.placeholder.com/40/ff1e42/ffffff?text=U";
 
-                // ഫയർബേസിലേക്ക് കമന്റ് വിടുന്നു
                 await addDoc(collection(db, "posts", postId, "comments"), {
                     text: text,
                     username: username,
@@ -618,7 +568,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
             } catch (error) {
                 console.error("Detailed error posting comment:", error);
-                alert("കമന്റ് ഇടാൻ പറ്റിയില്ല! കാരണം: " + error.message);
+                alert(" : " + error.message);
             } finally {
                 submitCommentBtn.disabled = false;
             }
@@ -626,20 +576,5 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 });
 
-
-function triggerAnnouncement(hasNew) {
-    const bell = document.getElementById('announcement-bell');
-    const audio = new Audio('notification-sound.mp3'); // ഒരു സൗണ്ട് ഫയൽ ഇവിടെ നൽകുക
-
-    if (hasNew) {
-        bell.classList.add('blink-me');
-        audio.play(); // സൗണ്ട് പ്ലേ ചെയ്യുന്നു
-    } else {
-        bell.classList.remove('blink-me');
-    }
-}
-
-// അനൗൺസ്‌മെന്റ് വരുമ്പോൾ ഇത് വിളിക്കുക: triggerAnnouncement(true);
-
-// ആദ്യ ലോഡിങ്ങിൽ ഹോം ഫീഡ് വർക്ക് ചെയ്യിക്കാൻ ഫങ്ഷൻ കോൾ ചെയ്യുന്നു
+// ആദ്യ ലോഡിങ്ങിൽ ഫീഡ് ലോഡ് ചെയ്യുന്നു
 fetchAndDisplayPosts();
