@@ -1,28 +1,37 @@
 <!DOCTYPE html>
-<html lang="ml">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Personal Chat</title>
+    <title>Personal Chat - InfinitySpot</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="chat.css">
 </head>
 <body>
 
     <div class="chat-container">
-        <!-- ചാറ്റ് ഹെഡർ -->
+        <!-- 🎯 ചാറ്റ് ഹെഡർ (പ്രൊഫൈൽ ചിത്രത്തോടൊപ്പം) -->
         <div class="chat-header">
-            <div class="chat-header-info">
-                <h3 id="chat-user-name">Chat Room</h3>
+            <button class="back-btn" onclick="window.history.back()"><i class="fa-solid fa-arrow-left"></i></button>
+            <div class="user-header-info">
+                <img id="header-user-avatar" src="https://ui-avatars.com/api/?name=User&background=333&color=fff" alt="Profile" class="header-avatar">
+                <div class="chat-header-text">
+                    <h3 id="chat-user-name">Chat Room</h3>
+                    <small id="chat-user-subname">@username</small>
+                </div>
             </div>
         </div>
         
         <!-- മെസ്സേജുകൾ കാണിക്കുന്ന ബോക്സ് -->
         <div id="chat-box" class="chat-box"></div>
         
-        <!-- മെസ്സേജ് ടൈപ്പ് ചെയ്യുന്ന ഭാഗം -->
+        <!-- മെസ്സേജ് ടൈപ്പ് ചെയ്യുന്ന ഭാഗം & Voice Message Button -->
         <div class="input-area">
-            <input type="text" id="message-input" placeholder="മെസ്സേജ് ടൈപ്പ് ചെയ്യൂ..." autocomplete="off">
-            <button id="send-btn">Send</button>
+            <button id="voice-record-btn" class="icon-btn" title="Hold/Click to Record Voice">
+                <i class="fa-solid fa-microphone"></i>
+            </button>
+            <input type="text" id="message-input" placeholder="Type a message..." autocomplete="off">
+            <button id="send-btn"><i class="fa-solid fa-paper-plane"></i></button>
         </div>
     </div>
 
