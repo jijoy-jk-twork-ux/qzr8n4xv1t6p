@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="ml">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Upload Reel | Spymo</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        :root {
+            --bg-color: #0b0b0c;
+            --card-bg: #16161a;
+            --primary-color: #ff3e6c; 
+            --text-color: #ffffff;
+            --text-muted: #8e8e93;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .upload-container {
+            background-color: var(--card-bg);
+            width: 100%;
+            max-width: 400px;
+            padding: 25px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            text-align: center;
+            border: 1px solid #2a2a2f;
+        }
+
+        h2 {
+            font-size: 1.5rem;
+            margin-bottom: 5px;
+        }
+
+        p.subtitle {
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            margin-bottom: 20px;
+        }
+
+        /* Fixed & Clean Upload Box Styling */
+        label.upload-box {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border: 2px dashed #3a3a43;
+            border-radius: 15px;
+            padding: 30px 15px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: rgba(255, 255, 255, 0.02);
+            margin-bottom: 15px;
+            outline: none;
+            user-select: none;
+        }
+
+        label.upload-box:hover {
+            border-color: var(--primary-color);
+            background: rgba(255, 62, 108, 0.05);
+            transform: translateY(-2px);
+        }
+
+        label.upload-box i {
+            font-size: 2.8rem;
+            color: var(--primary-color);
+            margin-bottom: 12px;
+            transition: transform 0.3s ease;
+        }
+
+        label.upload-box:hover i {
+            transform: scale(1.1);
+        }
+
+        label.upload-box p {
+            font-size: 0.88rem;
+            color: var(--text-color);
+            font-weight: 500;
+        }
+
+        #file-name {
+            font-size: 0.8rem;
+            font-weight: 600;
+            margin-top: 10px;
+            word-break: break-all;
+        }
+
+        /* Caption Textarea */
+        .caption-box {
+            width: 100%;
+            background: #222226;
+            border: 1px solid #3a3a43;
+            border-radius: 12px;
+            padding: 12px 15px;
+            color: #fff;
+            font-size: 0.9rem;
+            outline: none;
+            resize: none;
+            margin-bottom: 15px;
+            transition: border-color 0.2s ease;
+        }
+
+        .caption-box:focus {
+            border-color: var(--primary-color);
+        }
+
+        /* Upload Button */
+        .btn-upload {
+            width: 100%;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 14px;
+            font-size: 1rem;
+            font-weight: 600;
+            border-radius: 12px;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            transition: opacity 0.2s ease, transform 0.1s ease;
+        }
+
+        .btn-upload:active {
+            transform: scale(0.98);
+        }
+
+        .btn-upload:disabled {
+            background-color: #3a3a43;
+            color: var(--text-muted);
+            cursor: not-allowed;
+        }
+
+        /* Progress Bar */
+        .progress-container {
+            margin-top: 18px;
+            display: none;
+        }
+
+        .progress-bar-bg {
+            width: 100%;
+            height: 8px;
+            background-color: #2a2a2f;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            height: 100%;
+            width: 0%;
+            background-color: var(--primary-color);
+            transition: width 0.2s ease;
+            box-shadow: 0 0 8px var(--primary-color);
+        }
+
+        .percentage-text {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-top: 6px;
+            display: block;
+        }
+
+        #status-msg {
+            font-size: 0.85rem;
+            margin-top: 12px;
+            display: block;
+            font-weight: 500;
+        }
+    </style>
+</head>
+<body>
+
+<div class="upload-container">
+    <h2>Upload Reel</h2>
+    <p class="subtitle">Share your videos on Spymo</p>
+
+    <!-- Upload Select Box -->
+    <label for="video-input" class="upload-box">
+        <i class="fa-solid fa-cloud-arrow-up"></i>
+        <p>Choose Video from Gallery</p>
+        <span style="font-size: 0.75rem; color: var(--text-muted); margin-top: 4px;">Max 60 Seconds duration</span>
+        <div id="file-name"></div>
+    </label>
+
+    <input type="file" id="video-input" accept="video/mp4,video/quicktime" style="display: none;">
+
+    <!-- Caption Field -->
+    <textarea id="caption-input" class="caption-box" rows="3" placeholder="Write a caption..."></textarea>
+
+    <!-- Upload Button -->
+    <button class="btn-upload" id="upload-btn">
+        <i class="fa-solid fa-paper-plane"></i> Publish Reel
+    </button>
+
+    <!-- Progress Indicator -->
+    <div class="progress-container" id="progress-container">
+        <div class="progress-bar-bg">
+            <div class="progress-bar" id="progress-bar"></div>
+        </div>
+        <span class="percentage-text" id="percentage-text">0%</span>
+    </div>
+
+    <span id="status-msg"></span>
+</div>
+
+<script type="module" src="upload.js"></script>
+
+</body>
+</html>
