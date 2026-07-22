@@ -27,7 +27,11 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-// രണ്ട് ഫോണിലും വ്യത്യസ്ത UID ഉണ്ടാകാൻ LocalStorage ഉറപ്പാക്കുന്നു
+// Open License Sound Effects (Royalty Free)
+const winSound = new Audio("https://assets.mixkit.co/active_storage/sfx/1435/1435-preview.mp3");
+const loseSound = new Audio("https://assets.mixkit.co/active_storage/sfx/253/253-preview.mp3");
+const clickSound = new Audio("https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3");
+
 let currentUserId = localStorage.getItem("userUid");
 if (!currentUserId) {
     currentUserId = "USER_" + Math.floor(Math.random() * 10000);
@@ -39,6 +43,7 @@ let mySymbol = "";
 let isMyTurn = false;
 let boardState = ["", "", "", "", "", "", "", "", ""];
 let lastEmojiTimestamp = 0;
+let roomUnsubscribe = null;
 
 // 1. 🏆 TOP PLAYER REALTIME UPDATE
 function loadTopPlayer() {
@@ -57,10 +62,18 @@ function loadTopPlayer() {
 }
 loadTopPlayer();
 
-// 2. 🔍 MULTI-PLAYER ATOMIC MATCHMAKING SYSTEM
-document.getElementById("find-btn").addEventListener("click", async () => {
+// 2. 🔍 AUTOMATIC MATCHMAKING FUNCTION
+async function startMatchmaking() {
+    // UI റിസെറ്റ് ചെയ്യൽ
+    document.getElementById("board").style.display = "none";
+    document.getElementById("emoji-bar").style.display = "none";
     document.getElementById("status").innerText = "Searching for opponent...";
     document.getElementById("find-btn").style.display = "none";
+
+    boardState = ["", "", "", "", "", "", "", "", ""];
+    mySymbol = "";
+    isMyTurn = false;
+    updateUI();
 
     const waitingQueueRef = doc(db, "matchmaking", "queue");
 
@@ -68,22 +81,17 @@ document.getElementById("find-btn").addEventListener("click", async () => {
         await runTransaction(db, async (transaction) => {
             const queueSnap = await transaction.get(waitingQueueRef);
 
-            // ക്യൂവിൽ ആരെങ്കിലും വെയ്റ്റ് ചെയ്യുന്നുണ്ടോ എന്ന് പരിശോധിക്കുന്നു
             if (queueSnap.exists() && queueSnap.data().waitingPlayer) {
                 const waitingData = queueSnap.data();
 
-                // താൻ തന്നെയാണോ വെയ്റ്റ് ചെയ്യുന്നത് എന്ന് നോക്കുന്നു
                 if (waitingData.waitingPlayer !== currentUserId) {
                     roomId = waitingData.roomId;
-                    mySymbol = "O"; // രണ്ടാമത് കയറിയ ആൾക്ക് 'O'
+                    mySymbol = "O";
                     isMyTurn = false;
 
                     const roomRef = doc(db, "game_rooms", roomId);
 
-                    // ക്യൂവിൽ നിന്ന് വെയ്റ്റിംഗ് പ്ലെയറെ ഒഴിവാക്കുന്നു (റൂം ഇവിടെ ലോക്ക് ആയി)
                     transaction.delete(waitingQueueRef);
-
-                    // ഗെയിം റൂം ഫുൾ ആക്കുന്നു
                     transaction.update(roomRef, {
                         player2: currentUserId,
                         status: "playing"
@@ -93,14 +101,12 @@ document.getElementById("find-btn").addEventListener("click", async () => {
                 }
             }
 
-            // ആരും വെയ്റ്റിംഗ് ഇല്ലെങ്കിൽ പുതിയ റൂം ക്രിയേറ്റ് ചെയ്തു വെയിറ്റ് ചെയ്യുന്നു
             roomId = "room_" + Math.floor(Math.random() * 100000);
-            mySymbol = "X"; // ആദ്യത്തെ ആൾക്ക് 'X'
+            mySymbol = "X";
             isMyTurn = true;
 
             const roomRef = doc(db, "game_rooms", roomId);
 
-            // പുതിയ റൂം ഉണ്ടാക്കുന്നു
             transaction.set(roomRef, {
                 player1: currentUserId,
                 player2: null,
@@ -109,7 +115,6 @@ document.getElementById("find-btn").addEventListener("click", async () => {
                 status: "waiting"
             });
 
-            // ക്യൂവിലേക്ക് സ്വന്തം ID ആഡ് ചെയ്യുന്നു
             transaction.set(waitingQueueRef, {
                 waitingPlayer: currentUserId,
                 roomId: roomId
@@ -123,38 +128,51 @@ document.getElementById("find-btn").addEventListener("click", async () => {
         setupRoom(roomId);
 
     } catch (error) {
-        console.error("Matchmaking Transaction Failed: ", error);
-        document.getElementById("status").innerText = "Connection Error! Try Again.";
-        document.getElementById("find-btn").style.display = "block";
+        console.error("Matchmaking Error: ", error);
+        document.getElementById("status").innerText = "Connection Error! Retrying...";
+        setTimeout(startMatchmaking, 3000);
     }
-});
+}
 
-// 3. 🎲 GAME ROOM & EMOJI LISTENERS
+document.getElementById("find-btn").addEventListener("click", startMatchmaking);
+
+// 3. 🎲 GAME ROOM & OPPONENT USERNAME FETCH
 function setupRoom(rId) {
+    if (roomUnsubscribe) roomUnsubscribe();
+
     const roomRef = doc(db, "game_rooms", rId);
 
-    onSnapshot(roomRef, (snapshot) => {
+    roomUnsubscribe = onSnapshot(roomRef, async (snapshot) => {
         if (snapshot.exists()) {
             const data = snapshot.data();
 
-            // രണ്ടാമത്തെ ആൾ ജോയിൻ ചെയ്യുമ്പോൾ മാത്രം ബോർഡ് ഓപ്പൺ ആകുന്നു
             if (data.status === "playing") {
                 document.getElementById("board").style.display = "grid";
                 document.getElementById("emoji-bar").style.display = "flex";
+
+                // ഓപ്പോണന്റിന്റെ ID എടുത്ത് പേര് കണ്ടെത്തുന്നു
+                const opponentId = (data.player1 === currentUserId) ? data.player2 : data.player1;
+                let opponentName = "Opponent";
+
+                if (opponentId) {
+                    const oppSnap = await getDoc(doc(db, "users", opponentId));
+                    if (oppSnap.exists()) {
+                        opponentName = oppSnap.data().username || "Opponent";
+                    }
+                }
 
                 boardState = data.board || boardState;
                 updateUI();
 
                 if (data.turn !== mySymbol) {
                     isMyTurn = false;
-                    document.getElementById("status").innerText = `Opponent's Turn (${data.turn})...`;
+                    document.getElementById("status").innerText = `${opponentName}'s Turn (${data.turn})...`;
                 } else {
                     isMyTurn = true;
-                    document.getElementById("status").innerText = `Your Turn (${mySymbol})!`;
+                    document.getElementById("status").innerText = `Your Turn (${mySymbol}) vs ${opponentName}!`;
                 }
             }
 
-            // 🚀 ഓപ്പോണന്റ് അയക്കുന്ന എമോജി കാണാൻ
             if (data.lastEmoji && data.emojiTime > lastEmojiTimestamp) {
                 lastEmojiTimestamp = data.emojiTime;
                 showFloatingEmoji(data.lastEmoji);
@@ -181,6 +199,7 @@ document.querySelectorAll(".cell").forEach(cell => {
         const index = e.target.getAttribute("data-index");
 
         if (isMyTurn && boardState[index] === "") {
+            clickSound.play();
             boardState[index] = mySymbol;
             isMyTurn = false;
 
@@ -195,7 +214,7 @@ document.querySelectorAll(".cell").forEach(cell => {
     });
 });
 
-// 5. 😀 EMOJI SENDING FUNCTION
+// 5. 😀 EMOJI SENDING
 window.sendEmoji = async function(emoji) {
     if (!roomId) return;
     
@@ -206,7 +225,6 @@ window.sendEmoji = async function(emoji) {
     }, { merge: true });
 };
 
-// 🎈 EMOJI ANIMATION RENDERER
 function showFloatingEmoji(emoji) {
     const el = document.createElement("div");
     el.className = "floating-emoji";
@@ -222,12 +240,12 @@ function showFloatingEmoji(emoji) {
     }, 2000);
 }
 
-// 6. 🏆 WINNER CHECK & DRAW CHECK LOGIC
+// 6. 🏆 WINNER CHECK, SOUND & AUTOMATIC AUTO-REDIRECT (4 Sec)
 async function checkWinner() {
     const winPatterns = [
-        [0, 1, 2], [3, 4, 5], [6, 7, 8], // Horizontal
-        [0, 3, 6], [1, 4, 7], [2, 5, 8], // Vertical
-        [0, 4, 8], [2, 4, 6]             // Diagonal
+        [0, 1, 2], [3, 4, 5], [6, 7, 8],
+        [0, 3, 6], [1, 4, 7], [2, 5, 8],
+        [0, 4, 8], [2, 4, 6]
     ];
 
     let hasWinner = false;
@@ -237,20 +255,36 @@ async function checkWinner() {
         if (boardState[a] && boardState[a] === boardState[b] && boardState[a] === boardState[c]) {
             hasWinner = true;
             if (boardState[a] === mySymbol) {
-                alert("🎉 You Won!");
+                winSound.play();
+                showResultBanner("🎉 YOU WON! Finding next opponent in 4s...", "green");
                 await updateUserWins();
             } else {
-                alert("❌ You Lost!");
+                loseSound.play();
+                showResultBanner("❌ YOU LOST! Finding next opponent in 4s...", "red");
             }
+
+            // 4 സെക്കന്റുകൾക്ക് ശേഷം തനിയെ അടുത്ത പ്ലെയറെ തിരയാൻ പോകുന്നു
+            setTimeout(() => {
+                startMatchmaking();
+            }, 4000);
+
             return;
         }
     }
 
-    // സമനില (Draw) പരിശോധിക്കുന്നു
     const isBoardFull = boardState.every(cell => cell !== "");
     if (!hasWinner && isBoardFull) {
-        alert("🤝 Game Draw!");
+        showResultBanner("🤝 DRAW! Finding next opponent in 4s...", "orange");
+        setTimeout(() => {
+            startMatchmaking();
+        }, 4000);
     }
+}
+
+function showResultBanner(msg, color) {
+    const statusEl = document.getElementById("status");
+    statusEl.innerText = msg;
+    statusEl.style.color = color;
 }
 
 async function updateUserWins() {
