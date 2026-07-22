@@ -2,270 +2,154 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Catch the Stars - Offline Game</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spymo Tic-Tac-Toe</title>
     <style>
-        /* CSS ഡിസൈൻ (Red & Grey Theme) */
-        body {
+        body { 
+            font-family: 'Poppins', Arial, sans-serif; 
+            text-align: center; 
+            background: #121212; 
+            color: white; 
             margin: 0;
-            background-color: #1f2937; /* Dark Grey Background */
-            color: #f3f4f6;
-            font-family: 'Segoe UI', Arial, sans-serif;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            min-height: 100vh;
-            overflow: hidden;
-            touch-action: manipulation;
-            user-select: none;
+            padding: 20px;
+            overflow: hidden; /* എമോജി സ്ക്രീനിന് പുറത്തുപോകുമ്പോൾ സ്ക്രോൾ വരാതിരിക്കാൻ */
         }
 
-        #scoreboard {
-            font-size: 20px;
-            margin-bottom: 15px;
+        /* 👑 Top Player Red Card */
+        .top-player-card { 
+            background: linear-gradient(135deg, #d32f2f, #8b0000); 
+            color: #ffffff; 
+            padding: 15px; 
+            font-weight: bold; 
+            font-size: 1.2rem;
+            margin-bottom: 25px; 
+            border-radius: 12px; 
+            box-shadow: 0 4px 15px rgba(211, 47, 47, 0.4);
+            border: 1px solid #ff5252;
+        }
+
+        h2 { color: #ff5252; margin-bottom: 5px; }
+        #status { font-size: 1rem; color: #ccc; margin-bottom: 15px; }
+
+        /* 🎮 Red Game Board */
+        .board { 
+            display: grid; 
+            grid-template-columns: repeat(3, 90px); 
+            gap: 10px; 
+            justify-content: center; 
+            margin: 20px auto; 
+        }
+
+        .cell { 
+            width: 90px; 
+            height: 90px; 
+            background: #1e1e1e; 
+            font-size: 2.5rem; 
             font-weight: bold;
-            background: #374151;
-            padding: 8px 16px;
-            border-radius: 20px;
-            border: 1px solid #4b5563;
+            color: #ff5252;
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            cursor: pointer; 
+            border-radius: 10px; 
+            border: 2px solid #ff1744;
+            box-shadow: inset 0 0 10px rgba(255, 23, 68, 0.2);
+            transition: all 0.2s ease-in-out;
         }
 
-        #score { color: #ef4444; } /* Red Score */
+        .cell.disabled { pointer-events: none; opacity: 0.8; }
 
-        /* ഗെയിം ബോർഡ് */
-        #game-container {
-            position: relative;
-            width: 320px;
-            height: 450px;
-            background-color: #111827; /* Darker Grey Board */
-            border: 4px solid #4b5563;  /* Grey Border */
-            border-radius: 12px;
-            overflow: hidden;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+        /* 🔴 Red Matchmaking Button */
+        .red-btn { 
+            padding: 12px 25px; 
+            font-size: 16px; 
+            font-weight: bold;
+            background: #ff1744; 
+            color: white; 
+            border: none; 
+            border-radius: 8px; 
+            cursor: pointer; 
+            box-shadow: 0 4px 10px rgba(255, 23, 68, 0.5);
         }
 
-        /* റെഡ് ബാസ്കറ്റ് */
-        #basket {
-            position: absolute;
-            bottom: 15px;
-            left: 120px;
-            width: 80px;
-            height: 20px;
-            background-color: #ef4444; /* Pure Red Basket */
-            border-radius: 6px;
-            box-shadow: 0 0 10px rgba(239, 68, 68, 0.5);
-        }
-
-        /* വീഴുന്ന ഒബ്ജക്റ്റ് */
-        .star {
-            position: absolute;
-            width: 20px;
-            height: 20px;
-            background-color: #ef4444; /* Red Star */
-            border-radius: 50%;
-        }
-
-        /* മൊബൈൽ കൺട്രോൾ ബട്ടണുകൾ */
-        #controls {
+        /* 😀 Live Emoji Container */
+        .emoji-bar {
             display: flex;
-            gap: 40px;
-            margin-top: 25px;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 20px;
         }
 
-        .btn {
-            width: 90px;
-            height: 65px;
-            background-color: #4b5563; /* Grey Buttons */
-            color: white;
-            border: none;
+        .emoji-btn {
+            font-size: 2rem;
+            background: #1e1e1e;
+            border: 1px solid #ff1744;
+            padding: 8px 15px;
             border-radius: 50px;
-            font-size: 28px;
-            font-weight: bold;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
-        }
-
-        .btn:active {
-            background-color: #ef4444; /* അമർത്തുമ്പോൾ റെഡ് ആകാൻ */
-        }
-
-        /* ഗെയിം ഓവർ സ്ക്രീൻ */
-        #game-over-screen {
-            display: none;
-            position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(17, 24, 39, 0.95);
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            z-index: 10;
-        }
-
-        #game-over-screen h2 {
-            color: #ef4444;
-            font-size: 30px;
-            margin-bottom: 10px;
-        }
-
-        #restart-btn {
-            padding: 12px 24px;
-            background-color: #4b5563;
-            color: white;
-            border: 2px solid #ef4444;
-            border-radius: 8px;
-            font-size: 16px;
-            font-weight: bold;
             cursor: pointer;
             transition: 0.2s;
         }
 
-        #restart-btn:active {
-            background-color: #ef4444;
+        .emoji-btn:active { transform: scale(1.3); }
+
+        /* 🚀 Floating Emoji Animation */
+        .floating-emoji {
+            position: absolute;
+            bottom: 50px;
+            font-size: 3rem;
+            animation: floatUp 2s ease-in-out forwards;
+            pointer-events: none;
+            z-index: 999;
+        }
+
+        @keyframes floatUp {
+            0% {
+                transform: translateY(0) scale(0.5);
+                opacity: 1;
+            }
+            50% {
+                transform: translateY(-250px) scale(1.2);
+                opacity: 0.8;
+            }
+            100% {
+                transform: translateY(-500px) scale(1);
+                opacity: 0;
+            }
         }
     </style>
 </head>
 <body>
 
-    <div id="scoreboard">Score: <span id="score">0</span> | Missed: <span id="missed">0</span>/5</div>
-
-    <div id="game-container">
-        <div id="basket"></div>
-        
-        <div id="game-over-screen">
-            <h2>Game Over! 🎮</h2>
-            <p style="font-size: 18px; margin-bottom: 20px;">Score: <span id="final-score" style="color:#ef4444; font-weight:bold;">0</span></p>
-            <button id="restart-btn" onclick="resetGame()">Play Again</button>
-        </div>
+    <!-- 👑 Top Player Red Banner -->
+    <div class="top-player-card" id="top-player-banner">
+        👑 Top Player: Loading...
     </div>
 
-    <!-- മൊബൈൽ ബട്ടണുകൾ -->
-    <div id="controls">
-        <button class="btn" id="left-btn">←</button>
-        <button class="btn" id="right-btn">→</button>
+    <h2>Tic-Tac-Toe Arena</h2>
+    <p id="status">Click 'Find Match' to start!</p>
+
+    <button class="red-btn" id="find-btn">Find Match</button>
+
+    <!-- 🎮 Tic Tac Toe Grid -->
+    <div class="board" id="board" style="display: none;">
+        <div class="cell" data-index="0"></div>
+        <div class="cell" data-index="1"></div>
+        <div class="cell" data-index="2"></div>
+        <div class="cell" data-index="3"></div>
+        <div class="cell" data-index="4"></div>
+        <div class="cell" data-index="5"></div>
+        <div class="cell" data-index="6"></div>
+        <div class="cell" data-index="7"></div>
+        <div class="cell" data-index="8"></div>
     </div>
 
-    <script>
-        const container = document.getElementById('game-container');
-        const basket = document.getElementById('basket');
-        const scoreDisplay = document.getElementById('score');
-        const missedDisplay = document.getElementById('missed');
-        const gameOverScreen = document.getElementById('game-over-screen');
-        const finalScoreDisplay = document.getElementById('final-score');
+    <!-- 😀 Live Emojis Bar -->
+    <div class="emoji-bar" id="emoji-bar" style="display: none;">
+        <span class="emoji-btn" onclick="sendEmoji('🔥')">🔥</span>
+        <span class="emoji-btn" onclick="sendEmoji('😂')">😂</span>
+        <span class="emoji-btn" onclick="sendEmoji('👍')">👍</span>
+    </div>
 
-        let basketX = 120;
-        let score = 0;
-        let missed = 0;
-        let starSpeed = 4;
-        let isGameOver = false;
-        let gameLoopInterval;
-        let moveInterval;
-
-        // മൊബൈൽ ടച്ച് കൺട്രോൾസ്
-        function startMoving(dir) {
-            if (isGameOver) return;
-            clearInterval(moveInterval);
-            moveInterval = setInterval(() => {
-                if (dir === 'left' && basketX > 0) basketX -= 12;
-                if (dir === 'right' && basketX < 240) basketX += 12;
-                basket.style.left = basketX + 'px';
-            }, 25);
-        }
-
-        function stopMoving() { 
-            clearInterval(moveInterval); 
-        }
-
-        // ടച്ച് ഇവന്റുകൾ (മൊബൈലിനായി)
-        document.getElementById('left-btn').addEventListener('touchstart', (e) => { e.preventDefault(); startMoving('left'); });
-        document.getElementById('left-btn').addEventListener('touchend', stopMoving);
-        document.getElementById('right-btn').addEventListener('touchstart', (e) => { e.preventDefault(); startMoving('right'); });
-        document.getElementById('right-btn').addEventListener('touchend', stopMoving);
-
-        // പിസിയിൽ ചെക്ക് ചെയ്യാൻ കീബോർഡ് സപ്പോർട്ട്
-        document.addEventListener('keydown', (e) => {
-            if (isGameOver) return;
-            if (e.key === 'ArrowLeft' && basketX > 0) basketX -= 20;
-            if (e.key === 'ArrowRight' && basketX < 240) basketX += 20;
-            basket.style.left = basketX + 'px';
-        });
-
-        // നക്ഷത്രങ്ങൾ ഉണ്ടാക്കാൻ
-        function createStar() {
-            if (isGameOver) return;
-
-            const star = document.createElement('div');
-            star.classList.add('star');
-            let starX = Math.floor(Math.random() * 300);
-            let starY = 0;
-            star.style.left = starX + 'px';
-            container.appendChild(star);
-
-            let fall = setInterval(() => {
-                if (isGameOver) {
-                    clearInterval(fall);
-                    star.remove();
-                    return;
-                }
-
-                starY += starSpeed;
-                star.style.top = starY + 'px';
-
-                // ക്യാച്ച് ചെയ്തോ എന്ന് നോക്കാൻ (Collision check)
-                if (starY >= 400 && starY <= 420 && starX + 20 >= basketX && starX <= basketX + 80) {
-                    score++;
-                    scoreDisplay.innerText = score;
-                    star.remove();
-                    clearInterval(fall);
-                    
-                    // സ്കോർ കൂടുമ്പോൾ സ്പീഡ് കൂട്ടാൻ
-                    if (score % 5 === 0) starSpeed += 0.5;
-                }
-
-                // മിസ്സായാൽ
-                if (starY > 450) {
-                    missed++;
-                    missedDisplay.innerText = missed;
-                    star.remove();
-                    clearInterval(fall);
-
-                    if (missed >= 5) {
-                        endGame();
-                    }
-                }
-            }, 25);
-        }
-
-        function endGame() {
-            isGameOver = true;
-            clearInterval(gameLoopInterval);
-            finalScoreDisplay.innerText = score;
-            gameOverScreen.style.display = 'flex';
-        }
-
-        function resetGame() {
-            isGameOver = false;
-            score = 0;
-            missed = 0;
-            starSpeed = 4;
-            basketX = 120;
-            
-            scoreDisplay.innerText = score;
-            missedDisplay.innerText = missed;
-            basket.style.left = basketX + 'px';
-            gameOverScreen.style.display = 'none';
-
-            // സ്ക്രീനിലുള്ള ബാക്കി നക്ഷത്രങ്ങളെ ഒഴിവാക്കാൻ
-            document.querySelectorAll('.star').forEach(s => s.remove());
-
-            clearInterval(gameLoopInterval);
-            gameLoopInterval = setInterval(createStar, 1000);
-        }
-
-        // ഗെയിം സ്റ്റാർട്ട് ചെയ്യാൻ
-        gameLoopInterval = setInterval(createStar, 1000);
-    </script>
+    <script type="module" src="game.js"></script>
 </body>
 </html>
