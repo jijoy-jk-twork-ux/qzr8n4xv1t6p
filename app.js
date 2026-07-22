@@ -249,23 +249,29 @@ async function fetchAndDisplayPosts() {
             const postElement = document.createElement('article');
             postElement.classList.add('post');
             postElement.innerHTML = `
-                <div class="post-header" style="display: flex; align-items: center; gap: 10px; padding: 10px 0;">
-                    <img src="${userPic}" alt="Profile" class="profile-pic" style="width: 38px; height: 38px; border-radius: 50%; object-fit: cover;" onerror="this.src='${fallbackAvatar}'">
-                    <span class="username" style="font-weight: bold; cursor: pointer;" onclick="window.location.href='profile.html?id=${postData.userId}'">@${postData.username || 'anonymous'}</span>
-                    ${deleteIconHtml}
-                </div>
-                <div class="post-media">
-                    ${mediaHtml}
-                </div>
-                <div class="post-actions" style="display: flex; gap: 15px; align-items: center; padding: 10px 0 5px 0;">
-                    <i class="fa-regular fa-heart like-icon" style="cursor: pointer; font-size: 1.4rem;"></i>
-                    <i class="fa-regular fa-comment comment-icon" style="cursor: pointer; font-size: 1.4rem;" onclick="openCommentSheet('${postId}')"></i>
-                </div>
-                <div class="post-details">
-                    <span class="likes-count" style="font-weight: bold; display: block; margin-bottom: 2px; font-size: 0.9rem; color: #fff;">0 likes</span>
-                    <p><strong>@${postData.username || 'anonymous'}</strong> ${postData.caption || ""}</p>
-                </div>
-            `;
+    <div class="post-header" style="display: flex; align-items: center; justify-content: space-between; padding: 10px;">
+        <!-- പ്രൊഫൈൽ ചിത്രവും യൂസർനെയിമും ഒന്നിച്ചു നിർത്താൻ ഒരു Wrapper -->
+        <div style="display: flex; align-items: center; gap: 10px;">
+            <img src="${userPic}" alt="Profile" class="profile-pic" style="width: 38px; height: 38px; border-radius: 50%; object-fit: cover;" onerror="this.src='${fallbackAvatar}'">
+            <span class="username" style="font-weight: bold; cursor: pointer;" onclick="window.location.href='profile.html?id=${postData.userId}'">@${postData.username || 'anonymous'}</span>
+        </div>
+        
+        <!-- Delete Icon ഇവിടെ വലത് വശത്ത് കൃത്യമായി നിൽക്കും -->
+        ${deleteIconHtml}
+    </div>
+    <div class="post-media">
+        ${mediaHtml}
+    </div>
+    <div class="post-actions" style="display: flex; gap: 15px; align-items: center; padding: 10px 0 5px 0;">
+        <i class="fa-regular fa-heart like-icon" style="cursor: pointer; font-size: 1.4rem;"></i>
+        <i class="fa-regular fa-comment comment-icon" style="cursor: pointer; font-size: 1.4rem;" onclick="openCommentSheet('${postId}')"></i>
+    </div>
+    <div class="post-details">
+        <span class="likes-count" style="font-weight: bold; display: block; margin-bottom: 2px; font-size: 0.9rem; color: #fff;">0 likes</span>
+        <p><strong>@${postData.username || 'anonymous'}</strong> ${postData.caption || ""}</p>
+    </div>
+`;
+
             feedContainer.appendChild(postElement);
 
             // ലൈക്ക് ഫങ്ഷൻ കണക്ട് ചെയ്യുന്നു
