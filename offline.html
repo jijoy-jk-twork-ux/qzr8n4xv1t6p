@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="ml">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>You are Offline</title>
+    <style>
+        body {
+            background-color: #121212;
+            color: #ffffff;
+            font-family: sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            text-align: center;
+        }
+        h1 { color: #ff1e42; }
+        p { color: #aaa; }
+        button {
+            background: #ff1e42;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 15px;
+        }
+    </style>
+</head>
+<body>
+    <h1>You are Offline</h1>
+    <p>ഇന്റർനെറ്റ് കണക്ഷൻ ലഭ്യമല്ല. ദയവായി നെറ്റ്‌വർക്ക് പരിശോധിക്കുക.</p>
+    <button onclick="window.location.reload()">Retry</button>
+</body>
+</html>
