@@ -10,6 +10,7 @@ import {
     getDoc,
     setDoc, 
     updateDoc, 
+    deleteDoc,
     increment 
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
@@ -25,7 +26,12 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-const currentUserId = localStorage.getItem("userUid") || "USER_" + Math.floor(Math.random() * 1000);
+// രണ്ട് ഫോണിലും വ്യത്യസ്ത UID ഉണ്ടാകാൻ LocalStorage ഉറപ്പാക്കുന്നു
+let currentUserId = localStorage.getItem("userUid");
+if (!currentUserId) {
+    currentUserId = "USER_" + Math.floor(Math.random() * 10000);
+    localStorage.setItem("userUid", currentUserId);
+}
 
 let roomId = null;
 let mySymbol = "";
@@ -48,70 +54,80 @@ function loadTopPlayer() {
 }
 loadTopPlayer();
 
-// 2. 🔍 MATCHMAKING LOGIC (Clash ഹാൻഡിൽ ചെയ്തു അപ്ഡേറ്റ് ചെയ്തത്)
+// 2. 🔍 REALTIME DYNAMIC MATCHMAKING SYSTEM
 document.getElementById("find-btn").addEventListener("click", async () => {
     document.getElementById("status").innerText = "Searching for opponent...";
     document.getElementById("find-btn").style.display = "none";
 
-    roomId = "room_demo_123"; 
-    const roomRef = doc(db, "game_rooms", roomId);
-    const roomSnap = await getDoc(roomRef);
+    const waitingQueueRef = doc(db, "matchmaking", "queue");
+    const queueSnap = await getDoc(waitingQueueRef);
 
-    // റൂമിൽ നേരത്തെ കളിക്കാരൻ ഉണ്ടോ എന്ന് പരിശോധിക്കുന്നു
-    if (!roomSnap.exists() || !roomSnap.data().player1) {
-        // Player 1 -> X ആയിരിക്കും
-        mySymbol = "X";
-        isMyTurn = true;
-
-        await setDoc(roomRef, {
-            player1: currentUserId,
-            player2: null,
-            board: ["", "", "", "", "", "", "", "", ""],
-            turn: "X"
-        });
-        document.getElementById("status").innerText = "Waiting for Player 2...";
-    } else if (!roomSnap.data().player2 && roomSnap.data().player1 !== currentUserId) {
-        // Player 2 -> O ആയിരിക്കും
+    if (queueSnap.exists() && queueSnap.data().waitingPlayer && queueSnap.data().waitingPlayer !== currentUserId) {
+        // ആരെങ്കിലും വെയിറ്റ് ചെയ്യുന്നുണ്ടെങ്കിൽ, അവരുടെ റൂമിലേക്ക് ജോയിൻ ചെയ്യുന്നു (Player 2 - 'O')
+        const waitingData = queueSnap.data();
+        roomId = waitingData.roomId;
         mySymbol = "O";
         isMyTurn = false;
 
+        // Queue ക്ലിയർ ചെയ്ത് ഗെയിം സ്റ്റാർട്ട് ചെയ്യുന്നു
+        await deleteDoc(waitingQueueRef);
+
+        const roomRef = doc(db, "game_rooms", roomId);
         await updateDoc(roomRef, {
-            player2: currentUserId
+            player2: currentUserId,
+            status: "playing"
         });
+
+        setupRoom(roomId);
     } else {
-        // പഴയ റൂം റീസെറ്റ് ചെയ്ത് പുതിയ കളി തുടങ്ങുന്നു
+        // ആരും വെയിറ്റ് ചെയ്യുന്നില്ലെങ്കിൽ, പുതിയ ഒരു റൂം ഉണ്ടാക്കി വെയിറ്റ് ചെയ്യുന്നു (Player 1 - 'X')
+        roomId = "room_" + Math.floor(Math.random() * 100000);
         mySymbol = "X";
         isMyTurn = true;
+
+        const roomRef = doc(db, "game_rooms", roomId);
         await setDoc(roomRef, {
             player1: currentUserId,
             player2: null,
             board: ["", "", "", "", "", "", "", "", ""],
-            turn: "X"
+            turn: "X",
+            status: "waiting"
         });
-    }
 
-    setupRoom(roomId);
+        // Queue-ൽ താൻ വെയിറ്റിംഗ് ആണെന്ന് ഇടുന്നു
+        await setDoc(waitingQueueRef, {
+            waitingPlayer: currentUserId,
+            roomId: roomId
+        });
+
+        document.getElementById("status").innerText = "Waiting for an opponent to join...";
+        setupRoom(roomId);
+    }
 });
 
 // 3. 🎲 GAME ROOM & EMOJI LISTENERS
 function setupRoom(rId) {
-    document.getElementById("board").style.display = "grid";
-    document.getElementById("emoji-bar").style.display = "flex";
-
     const roomRef = doc(db, "game_rooms", rId);
 
     onSnapshot(roomRef, (snapshot) => {
         if (snapshot.exists()) {
             const data = snapshot.data();
-            boardState = data.board || boardState;
-            updateUI();
-            
-            if (data.turn !== mySymbol) {
-                isMyTurn = false;
-                document.getElementById("status").innerText = `Opponent's Turn (${data.turn})...`;
-            } else {
-                isMyTurn = true;
-                document.getElementById("status").innerText = `Your Turn (${mySymbol})!`;
+
+            // രണ്ടാമത്തെ ആൾ ജോയിൻ ചെയ്യുമ്പോൾ മാത്രം ബോർഡ് ഓപ്പൺ ആകുന്നു
+            if (data.status === "playing") {
+                document.getElementById("board").style.display = "grid";
+                document.getElementById("emoji-bar").style.display = "flex";
+
+                boardState = data.board || boardState;
+                updateUI();
+
+                if (data.turn !== mySymbol) {
+                    isMyTurn = false;
+                    document.getElementById("status").innerText = `Opponent's Turn (${data.turn})...`;
+                } else {
+                    isMyTurn = true;
+                    document.getElementById("status").innerText = `Your Turn (${mySymbol})!`;
+                }
             }
 
             // 🚀 ഓപ്പോണന്റ് അയക്കുന്ന എമോജി കാണാൻ
