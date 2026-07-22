@@ -1,6 +1,18 @@
 // Firebase SDKs
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-import { getFirestore, collection, query, where, getDocs, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+import { 
+    getFirestore, 
+    collection, 
+    query, 
+    where, 
+    getDocs, 
+    doc, 
+    getDoc, 
+    setDoc, 
+    updateDoc, 
+    arrayUnion, 
+    arrayRemove 
+} from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
 // Firebase Config
 const firebaseConfig = {
@@ -28,57 +40,89 @@ if (!localUserData) {
 } else {
     const loggedInUser = JSON.parse(localUserData);
 
-    // 2. URL-ൽ മറ്റ് ആരുടെയെങ്കിലും 'id' ഉണ്ടോ എന്ന് നോക്കുന്നു
+    // 2. URL-ൽ മറ്റ് ആരുടെയെങ്കിലും 'id' അല്ലെങ്കിൽ 'username' ഉണ്ടോ എന്ന് നോക്കുന്നു
     const urlParams = new URLSearchParams(window.location.search);
     const searchedUserId = urlParams.get('id');
+    const searchedUsername = urlParams.get('username');
 
-    const targetUserId = searchedUserId ? searchedUserId : loggedInUser.uid;
-
-    initProfile(targetUserId, loggedInUser);
+    initProfile(searchedUserId, searchedUsername, loggedInUser);
 }
 
 // 🎯 പ്രൊഫൈൽ ഡാറ്റ ഇൻഷ്യലൈസ് ചെയ്യുന്ന ഫങ്ഷൻ
-async function initProfile(targetUserId, loggedInUser) {
-    let username = loggedInUser.username || "User";
-    let bio = loggedInUser.bio || "Exploring the digital space! 🚀";
-    let profilePic = loggedInUser.profilePic || loggedInUser.avatar || "";
+async function initProfile(searchedUserId, searchedUsername, loggedInUser) {
+    let targetUserData = null;
+    let targetUserId = searchedUserId;
 
-    const isOwnProfile = (targetUserId === loggedInUser.uid);
+    try {
+        if (searchedUsername) {
+            const usersRef = collection(db, "users");
+            const q = query(usersRef, where("username", "==", searchedUsername.trim().toLowerCase()));
+            const querySnap = await getDocs(q);
+            if (!querySnap.empty) {
+                const userDoc = querySnap.docs[0];
+                targetUserId = userDoc.id;
+                targetUserData = userDoc.data();
+            }
+        } 
+        else if (searchedUserId) {
+            const userDocRef = doc(db, "users", searchedUserId);
+            const userDocSnap = await getDoc(userDocRef);
+            if (userDocSnap.exists()) {
+                targetUserData = userDocSnap.data();
+            }
+        }
+    } catch (err) {
+        console.error("Target user fetch error:", err);
+    }
 
-    // സ്വന്തം പ്രൊഫൈൽ ആണെങ്കിൽ മാത്രം ക്യാമറ എഡിറ്റ് ബട്ടൺ കാണിക്കുക
+    const isOwnProfile = !targetUserId || (targetUserId === loggedInUser.uid);
+
+    let displayUsername = "";
+    let displayBio = "";
+    let displayPic = "";
+    let followersList = [];
+    let followingList = [];
+
     if (isOwnProfile) {
+        targetUserId = loggedInUser.uid;
+        displayUsername = loggedInUser.username || "User";
+        displayBio = loggedInUser.bio || "Exploring the digital space! 🚀";
+        displayPic = loggedInUser.profilePic || loggedInUser.avatar || "";
+        followersList = loggedInUser.followers || [];
+        followingList = loggedInUser.following || [];
+
         const editLabel = document.getElementById("edit-pic-label");
         if (editLabel) editLabel.style.display = "flex";
         setupProfilePicUpload(loggedInUser);
+
+        setupActionButton(true, false, targetUserId, displayUsername, loggedInUser);
+    } else {
+        displayUsername = targetUserData ? targetUserData.username : "User";
+        displayBio = targetUserData ? (targetUserData.bio || "Exploring the digital space! 🚀") : "";
+        displayPic = targetUserData ? (targetUserData.profilePic || targetUserData.avatar || "") : "";
+        followersList = targetUserData && Array.isArray(targetUserData.followers) ? targetUserData.followers : [];
+        followingList = targetUserData && Array.isArray(targetUserData.following) ? targetUserData.following : [];
+
+        let myFollowing = loggedInUser.following || [];
+        let isFollowing = myFollowing.includes(displayUsername);
+
+        setupActionButton(false, isFollowing, targetUserId, displayUsername, loggedInUser);
     }
 
-    try {
-        const userDocRef = doc(db, "users", targetUserId);
-        const userDocSnap = await getDoc(userDocRef);
-
-        if (userDocSnap.exists()) {
-            const userData = userDocSnap.data();
-            username = userData.username || username;
-            bio = userData.bio || bio;
-            profilePic = userData.profilePic || userData.avatar || profilePic;
-        }
-    } catch (error) {
-        console.error("User data fetch error:", error);
-    }
-
-    setProfileUI(username, bio, profilePic);
+    setProfileUI(displayUsername, displayBio, displayPic, followersList.length, followingList.length);
     fetchPosts(targetUserId);
 }
 
 // 🎨 UI-ൽ പ്രൊഫൈൽ വിവരങ്ങൾ നൽകുന്ന ഹെൽപ്പർ ഫങ്ഷൻ
-function setProfileUI(username, bio, profilePic) {
+function setProfileUI(username, bio, profilePic, followersCount, followingCount) {
     document.getElementById("user-display-name").innerText = username;
     document.getElementById("user-handle").innerText = `@${username.toLowerCase()}`;
     document.getElementById("user-bio").innerText = bio;
 
-    const imgElem = document.getElementById("user-profile-pic");
+    document.getElementById("followers-count").innerText = followersCount;
+    document.getElementById("following-count").innerText = followingCount;
 
-    // പേരിന്റെ ആദ്യ അക്ഷരം വെച്ചുള്ള ചുവന്ന ആവതാർ generator (Image load ആയില്ലെങ്കിൽ)
+    const imgElem = document.getElementById("user-profile-pic");
     const fallbackAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(username)}&background=ff1e42&color=fff&size=128`;
 
     if (profilePic && profilePic.trim() !== "") {
@@ -87,13 +131,137 @@ function setProfileUI(username, bio, profilePic) {
         imgElem.src = fallbackAvatar;
     }
 
-    // ഫോട്ടോയുടെ ലിങ്ക് കേടാണെങ്കിൽ (Broken Image) ഓട്ടോമാറ്റിക് ആയി Fallback Avatar കാണിക്കും
     imgElem.onerror = function() {
         this.src = fallbackAvatar;
     };
 }
 
-// 📸 ഗാലറിയിൽ നിന്ന് ഫോട്ടോ അപ്‌ലോഡ് ചെയ്യുന്ന ഫങ്ഷൻ
+// 🤝 ACTION BUTTON (Edit Profile Modal vs Follow / Unfollow)
+function setupActionButton(isOwnProfile, isFollowing, targetUserId, targetUsername, loggedInUser) {
+    const actionBtn = document.getElementById("profile-action-btn");
+    if (!actionBtn) return;
+
+    actionBtn.style.display = "inline-block";
+
+    if (isOwnProfile) {
+        actionBtn.innerText = "Edit Profile";
+        actionBtn.className = "profile-action-btn";
+
+        const modal = document.getElementById("edit-profile-modal");
+        const closeModalBtn = document.getElementById("close-modal-btn");
+        const saveBioBtn = document.getElementById("save-bio-btn");
+        const bioInput = document.getElementById("edit-bio-input");
+
+        // Edit Profile ബട്ടൺ ക്ലിക്ക് ചെയ്യുമ്പോൾ Pop-up Modal തുറക്കുന്നു
+        actionBtn.onclick = () => {
+            bioInput.value = loggedInUser.bio || "Exploring the digital space! 🚀";
+            modal.style.display = "flex";
+        };
+
+        // Pop-up അടയ്ക്കുന്നു
+        closeModalBtn.onclick = () => {
+            modal.style.display = "none";
+        };
+
+        // Modal-ന് പുറത്ത് ക്ലിക്ക് ചെയ്താൽ ക്ലോസ് ആകും
+        window.onclick = (event) => {
+            if (event.target === modal) {
+                modal.style.display = "none";
+            }
+        };
+
+        // Save Bio Logic
+        saveBioBtn.onclick = async () => {
+            const newBio = bioInput.value.trim();
+            if (!newBio) return;
+
+            saveBioBtn.innerText = "Saving...";
+            saveBioBtn.disabled = true;
+
+            try {
+                // 1. Firestore Database അപ്‌ഡേറ്റ്
+                await setDoc(doc(db, "users", loggedInUser.uid), {
+                    bio: newBio
+                }, { merge: true });
+
+                // 2. LocalStorage അപ്‌ഡേറ്റ്
+                loggedInUser.bio = newBio;
+                localStorage.setItem("infinity_user", JSON.stringify(loggedInUser));
+
+                // 3. UI അപ്‌ഡേറ്റ്
+                document.getElementById("user-bio").innerText = newBio;
+                modal.style.display = "none";
+
+            } catch (err) {
+                console.error("Bio Update Error:", err);
+                alert("Bio അപ്‌ഡേറ്റ് ചെയ്യാൻ പറ്റിയില്ല!");
+            } finally {
+                saveBioBtn.innerText = "Save Changes";
+                saveBioBtn.disabled = false;
+            }
+        };
+
+    } else {
+        function updateBtnState(followingState) {
+            if (followingState) {
+                actionBtn.innerText = "Following";
+                actionBtn.className = "profile-action-btn following";
+            } else {
+                actionBtn.innerText = "Follow";
+                actionBtn.className = "profile-action-btn follow-btn";
+            }
+        }
+
+        updateBtnState(isFollowing);
+
+        actionBtn.onclick = async () => {
+            actionBtn.disabled = true;
+
+            let myFollowing = loggedInUser.following || [];
+            let followersSpan = document.getElementById("followers-count");
+            let currentFollowersCount = parseInt(followersSpan.innerText) || 0;
+
+            try {
+                const myDocRef = doc(db, "users", loggedInUser.uid);
+                const targetDocRef = doc(db, "users", targetUserId);
+
+                if (!isFollowing) {
+                    isFollowing = true;
+                    myFollowing.push(targetUsername);
+                    updateBtnState(true);
+                    followersSpan.innerText = currentFollowersCount + 1;
+
+                    await updateDoc(myDocRef, { following: arrayUnion(targetUsername) });
+                    if (targetUserId) {
+                        await updateDoc(targetDocRef, { followers: arrayUnion(loggedInUser.username) });
+                    }
+                } else {
+                    isFollowing = false;
+                    myFollowing = myFollowing.filter(u => u !== targetUsername);
+                    updateBtnState(false);
+                    followersSpan.innerText = Math.max(0, currentFollowersCount - 1);
+
+                    await updateDoc(myDocRef, { following: arrayRemove(targetUsername) });
+                    if (targetUserId) {
+                        await updateDoc(targetDocRef, { followers: arrayRemove(loggedInUser.username) });
+                    }
+                }
+
+                loggedInUser.following = myFollowing;
+                localStorage.setItem("infinity_user", JSON.stringify(loggedInUser));
+
+            } catch (error) {
+                console.error("Follow Toggle Error:", error);
+                isFollowing = !isFollowing;
+                updateBtnState(isFollowing);
+            } finally {
+                actionBtn.disabled = false;
+            }
+        };
+    }
+}
+
+// 📸 പ്രൊഫൈൽ ഫോട്ടോ അപ്‌ലോഡ്
 function setupProfilePicUpload(loggedInUser) {
     const fileInput = document.getElementById("profile-pic-input");
     if (!fileInput) return;
@@ -110,13 +278,12 @@ function setupProfilePicUpload(loggedInUser) {
         const profileImgElem = document.getElementById("user-profile-pic");
 
         try {
-            profileImgElem.style.opacity = "0.4"; // Uploading Visual Effect
+            profileImgElem.style.opacity = "0.4";
 
             const formData = new FormData();
             formData.append("file", file);
             formData.append("upload_preset", UPLOAD_PRESET);
 
-            // Cloudinary അപ്‌ലോഡ് API Call
             const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`, {
                 method: "POST",
                 body: formData
@@ -128,21 +295,17 @@ function setupProfilePicUpload(loggedInUser) {
                 throw new Error("Upload Failed!");
             }
 
-            // ക്യാഷിംഗ് ഒഴിവാക്കാൻ ടൈംസ്റ്റാമ്പ് ചേർക്കുന്നു
             const newPicUrl = data.secure_url;
 
-            // 1. Firestore Database അപ്‌ഡേറ്റ് (profilePic, avatar രണ്ടിലും സേവ് ചെയ്യും)
             await setDoc(doc(db, "users", loggedInUser.uid), {
                 profilePic: newPicUrl,
                 avatar: newPicUrl
             }, { merge: true });
 
-            // 2. LocalStorage അപ്‌ഡേറ്റ്
             loggedInUser.profilePic = newPicUrl;
             loggedInUser.avatar = newPicUrl;
             localStorage.setItem("infinity_user", JSON.stringify(loggedInUser));
 
-            // 3. UI ഉടനടി അപ്‌ഡേറ്റ് ചെയ്യുന്നു
             profileImgElem.src = newPicUrl;
             profileImgElem.style.opacity = "1";
 
@@ -150,13 +313,13 @@ function setupProfilePicUpload(loggedInUser) {
 
         } catch (err) {
             console.error("Profile Pic Update Error:", err);
-            alert("അപ്‌ലോഡിൽ തടസ്സം വന്നു. അപ്‌ലോഡ് പ്രീസെറ്റ് (UPLOAD_PRESET) ശരിയാണോ എന്ന് പരിശോധിക്കുക!");
+            alert("അപ്‌ലോഡിൽ തടസ്സം വന്നു. UPLOAD_PRESET പരിശോധിക്കുക!");
             profileImgElem.style.opacity = "1";
         }
     });
 }
 
-// 📱 പോസ്റ്റുകൾ കാണിക്കുന്ന ഗ്രിഡ് ലോഡർ
+// 📱 പോസ്റ്റ് ഗ്രിഡ് ലോഡർ
 async function fetchPosts(userId) {
     const postsGrid = document.getElementById("my-posts-grid");
     if (!postsGrid) return;
