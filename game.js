@@ -11,7 +11,8 @@ import {
     setDoc, 
     updateDoc, 
     deleteDoc,
-    increment 
+    increment,
+    runTransaction 
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
 const firebaseConfig = { 
@@ -44,64 +45,87 @@ function loadTopPlayer() {
     const q = query(collection(db, "users"), orderBy("wins", "desc"), limit(1));
     onSnapshot(q, (snapshot) => {
         const banner = document.getElementById("top-player-banner");
-        if (!snapshot.empty) {
-            const topUser = snapshot.docs[0].data();
-            banner.innerHTML = `👑 Top Player: <b>${topUser.username || "Unknown"}</b> (${topUser.wins || 0} Wins)`;
-        } else {
-            banner.innerHTML = "👑 Top Player: No Leaders Yet";
+        if (banner) {
+            if (!snapshot.empty) {
+                const topUser = snapshot.docs[0].data();
+                banner.innerHTML = `👑 Top Player: <b>${topUser.username || "Unknown"}</b> (${topUser.wins || 0} Wins)`;
+            } else {
+                banner.innerHTML = "👑 Top Player: No Leaders Yet";
+            }
         }
     });
 }
 loadTopPlayer();
 
-// 2. 🔍 REALTIME DYNAMIC MATCHMAKING SYSTEM
+// 2. 🔍 MULTI-PLAYER ATOMIC MATCHMAKING SYSTEM
 document.getElementById("find-btn").addEventListener("click", async () => {
     document.getElementById("status").innerText = "Searching for opponent...";
     document.getElementById("find-btn").style.display = "none";
 
     const waitingQueueRef = doc(db, "matchmaking", "queue");
-    const queueSnap = await getDoc(waitingQueueRef);
 
-    if (queueSnap.exists() && queueSnap.data().waitingPlayer && queueSnap.data().waitingPlayer !== currentUserId) {
-        // ആരെങ്കിലും വെയിറ്റ് ചെയ്യുന്നുണ്ടെങ്കിൽ, അവരുടെ റൂമിലേക്ക് ജോയിൻ ചെയ്യുന്നു (Player 2 - 'O')
-        const waitingData = queueSnap.data();
-        roomId = waitingData.roomId;
-        mySymbol = "O";
-        isMyTurn = false;
+    try {
+        await runTransaction(db, async (transaction) => {
+            const queueSnap = await transaction.get(waitingQueueRef);
 
-        // Queue ക്ലിയർ ചെയ്ത് ഗെയിം സ്റ്റാർട്ട് ചെയ്യുന്നു
-        await deleteDoc(waitingQueueRef);
+            // ക്യൂവിൽ ആരെങ്കിലും വെയ്റ്റ് ചെയ്യുന്നുണ്ടോ എന്ന് പരിശോധിക്കുന്നു
+            if (queueSnap.exists() && queueSnap.data().waitingPlayer) {
+                const waitingData = queueSnap.data();
 
-        const roomRef = doc(db, "game_rooms", roomId);
-        await updateDoc(roomRef, {
-            player2: currentUserId,
-            status: "playing"
+                // താൻ തന്നെയാണോ വെയ്റ്റ് ചെയ്യുന്നത് എന്ന് നോക്കുന്നു
+                if (waitingData.waitingPlayer !== currentUserId) {
+                    roomId = waitingData.roomId;
+                    mySymbol = "O"; // രണ്ടാമത് കയറിയ ആൾക്ക് 'O'
+                    isMyTurn = false;
+
+                    const roomRef = doc(db, "game_rooms", roomId);
+
+                    // ക്യൂവിൽ നിന്ന് വെയ്റ്റിംഗ് പ്ലെയറെ ഒഴിവാക്കുന്നു (റൂം ഇവിടെ ലോക്ക് ആയി)
+                    transaction.delete(waitingQueueRef);
+
+                    // ഗെയിം റൂം ഫുൾ ആക്കുന്നു
+                    transaction.update(roomRef, {
+                        player2: currentUserId,
+                        status: "playing"
+                    });
+
+                    return;
+                }
+            }
+
+            // ആരും വെയ്റ്റിംഗ് ഇല്ലെങ്കിൽ പുതിയ റൂം ക്രിയേറ്റ് ചെയ്തു വെയിറ്റ് ചെയ്യുന്നു
+            roomId = "room_" + Math.floor(Math.random() * 100000);
+            mySymbol = "X"; // ആദ്യത്തെ ആൾക്ക് 'X'
+            isMyTurn = true;
+
+            const roomRef = doc(db, "game_rooms", roomId);
+
+            // പുതിയ റൂം ഉണ്ടാക്കുന്നു
+            transaction.set(roomRef, {
+                player1: currentUserId,
+                player2: null,
+                board: ["", "", "", "", "", "", "", "", ""],
+                turn: "X",
+                status: "waiting"
+            });
+
+            // ക്യൂവിലേക്ക് സ്വന്തം ID ആഡ് ചെയ്യുന്നു
+            transaction.set(waitingQueueRef, {
+                waitingPlayer: currentUserId,
+                roomId: roomId
+            });
         });
 
+        if (mySymbol === "X") {
+            document.getElementById("status").innerText = "Waiting for an opponent...";
+        }
+        
         setupRoom(roomId);
-    } else {
-        // ആരും വെയിറ്റ് ചെയ്യുന്നില്ലെങ്കിൽ, പുതിയ ഒരു റൂം ഉണ്ടാക്കി വെയിറ്റ് ചെയ്യുന്നു (Player 1 - 'X')
-        roomId = "room_" + Math.floor(Math.random() * 100000);
-        mySymbol = "X";
-        isMyTurn = true;
 
-        const roomRef = doc(db, "game_rooms", roomId);
-        await setDoc(roomRef, {
-            player1: currentUserId,
-            player2: null,
-            board: ["", "", "", "", "", "", "", "", ""],
-            turn: "X",
-            status: "waiting"
-        });
-
-        // Queue-ൽ താൻ വെയിറ്റിംഗ് ആണെന്ന് ഇടുന്നു
-        await setDoc(waitingQueueRef, {
-            waitingPlayer: currentUserId,
-            roomId: roomId
-        });
-
-        document.getElementById("status").innerText = "Waiting for an opponent to join...";
-        setupRoom(roomId);
+    } catch (error) {
+        console.error("Matchmaking Transaction Failed: ", error);
+        document.getElementById("status").innerText = "Connection Error! Try Again.";
+        document.getElementById("find-btn").style.display = "block";
     }
 });
 
@@ -198,17 +222,20 @@ function showFloatingEmoji(emoji) {
     }, 2000);
 }
 
-// 6. 🏆 WINNER CHECK & SCORE INCREMENT
+// 6. 🏆 WINNER CHECK & DRAW CHECK LOGIC
 async function checkWinner() {
     const winPatterns = [
-        [0,1,2], [3,4,5], [6,7,8],
-        [0,3,6], [1,4,7], [2,5,8],
-        [0,4,8], [2,4,6]
+        [0, 1, 2], [3, 4, 5], [6, 7, 8], // Horizontal
+        [0, 3, 6], [1, 4, 7], [2, 5, 8], // Vertical
+        [0, 4, 8], [2, 4, 6]             // Diagonal
     ];
+
+    let hasWinner = false;
 
     for (let pattern of winPatterns) {
         const [a, b, c] = pattern;
         if (boardState[a] && boardState[a] === boardState[b] && boardState[a] === boardState[c]) {
+            hasWinner = true;
             if (boardState[a] === mySymbol) {
                 alert("🎉 You Won!");
                 await updateUserWins();
@@ -217,6 +244,12 @@ async function checkWinner() {
             }
             return;
         }
+    }
+
+    // സമനില (Draw) പരിശോധിക്കുന്നു
+    const isBoardFull = boardState.every(cell => cell !== "");
+    if (!hasWinner && isBoardFull) {
+        alert("🤝 Game Draw!");
     }
 }
 
