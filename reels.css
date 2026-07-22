@@ -1,0 +1,238 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+body {
+    background-color: #000;
+    color: #fff;
+    overflow: hidden; /* Scrollbar ഒഴിവാക്കാൻ */
+}
+
+/* Reels Container (Full Window Height) */
+.reels-container {
+    height: 100vh;
+    width: 100vw;
+    overflow-y: scroll;
+    scroll-snap-type: y mandatory; /* TikTok / Reels Snap Scroll */
+    scrollbar-width: none; /* Firefox */
+}
+
+.reels-container::-webkit-scrollbar {
+    display: none; /* Chrome/Safari */
+}
+
+/* Individual Reel Card */
+.reel-card {
+    height: 100vh;
+    width: 100vw;
+    position: relative;
+    scroll-snap-align: start;
+    background-color: #121212;
+}
+
+.reel-video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* Overlay Details (Bottom Left) */
+.reel-overlay {
+    position: absolute;
+    bottom: 25px;
+    left: 15px;
+    right: 80px;
+    z-index: 10;
+}
+
+.user-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.user-avatar {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    border: 2px solid #ff1e42;
+    object-fit: cover;
+}
+
+.username {
+    font-weight: 700;
+    font-size: 0.95rem;
+}
+
+.caption {
+    font-size: 0.85rem;
+    color: #ddd;
+    line-height: 1.3;
+}
+
+/* Right Action Buttons (Like, Comment, Share) */
+.action-buttons {
+    position: absolute;
+    right: 15px;
+    bottom: 35px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 22px;
+    z-index: 10;
+}
+
+.action-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    background: none;
+    border: none;
+    color: #fff;
+    font-size: 1.6rem;
+    cursor: pointer;
+}
+
+.action-btn span {
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.action-btn .fa-heart.active {
+    color: #ff1e42;
+}
+/* 🗑️ Delete Button Styling */
+.action-btn.delete-btn {
+    color: #ff1e42;
+    transition: transform 0.2s ease, color 0.2s ease;
+}
+
+.action-btn.delete-btn:hover {
+    color: #ff4d6d;
+    transform: scale(1.15);
+}
+
+.action-btn.delete-btn:active {
+    transform: scale(0.95);
+}
+/* 💬 Comment Modal Styles */
+.comment-modal {
+    display: none;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    z-index: 100;
+    justify-content: center;
+    align-items: flex-end;
+}
+
+.comment-modal-content {
+    background: #121212;
+    width: 100%;
+    max-width: 500px;
+    height: 60vh;
+    border-top-left-radius: 20px;
+    border-top-right-radius: 20px;
+    display: flex;
+    flex-direction: column;
+    padding: 15px;
+    box-sizing: border-box;
+    animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+    from { transform: translateY(100%); }
+    to { transform: translateY(0); }
+}
+
+.comment-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #222;
+    padding-bottom: 10px;
+    color: #fff;
+}
+
+.close-btn {
+    font-size: 28px;
+    cursor: pointer;
+    color: #aaa;
+}
+
+.comments-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 10px 0;
+}
+
+.comment-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    margin-bottom: 15px;
+    color: #fff;
+}
+
+.comment-avatar {
+    width: 35px;
+    height: 35px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.comment-text-box {
+    background: #1e1e1e;
+    padding: 8px 12px;
+    border-radius: 12px;
+    max-width: 80%;
+}
+
+.comment-user {
+    font-weight: bold;
+    font-size: 13px;
+    color: #4da6ff;
+    display: block;
+    margin-bottom: 3px;
+}
+
+.comment-text {
+    font-size: 14px;
+    margin: 0;
+    word-break: break-word;
+}
+
+.comment-input-area {
+    display: flex;
+    gap: 10px;
+    padding-top: 10px;
+    border-top: 1px solid #222;
+}
+
+.comment-input-area input {
+    flex: 1;
+    background: #222;
+    border: none;
+    padding: 12px;
+    border-radius: 25px;
+    color: #fff;
+    outline: none;
+}
+
+.comment-input-area button {
+    background: #ff1e42;
+    border: none;
+    width: 45px;
+    height: 45px;
+    border-radius: 50%;
+    color: #fff;
+    cursor: pointer;
+}
