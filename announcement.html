@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>InfinitySpot - Updates</title>
+    <title>Infinity Spot X - Updates</title>
     <!-- Font Awesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -38,7 +38,7 @@
         transition: color 0.2s;
     }
     .back-btn:hover {
-        color: #ff3366; /* ഹോവർ ചെയ്യുമ്പോൾ ഇൻഫിനിറ്റി പിങ്ക് കളർ */
+        color: #ff3366; /* ഇൻഫിനിറ്റി പിങ്ക് കളർ */
     }
 
     /* മെയിൻ ബോക്സ് */
@@ -48,14 +48,14 @@
         padding: 0 15px;
     }
 
-    /* 🔒 ഡെവലപ്പർ ഫോം (നിനക്ക് മാത്രം കാണുന്നത്) */
+    /* 🔒 ഡെവലപ്പർ ഫോം (infinityspot-ന് മാത്രം കാണുന്നത്) */
     #admin-update-form {
         background: #111;
         padding: 15px;
         border-radius: 12px;
         border: 1px solid #222;
         margin-bottom: 25px;
-        box-shadow: 0 4px 12px rgba(255, 51, 102, 0.1); /* ചെറിയൊരു പിങ്ക് ഗ്ലോ */
+        box-shadow: 0 4px 12px rgba(255, 51, 102, 0.1); /* പിങ്ക് ഗ്ലോ */
     }
 
     /* എഴുതുന്ന ടെക്സ്റ്റ് ഏരിയ */
@@ -73,7 +73,7 @@
     }
     #update-text:focus {
         outline: none;
-        border-color: #8e8e93; /* ക്ലിക്ക് ചെയ്യുമ്പോൾ ബോർഡർ പിങ്ക് ആകും */
+        border-color: #ff1e42;
     }
 
     /* അപ്‌ഡേറ്റ് പോസ്റ്റ് ചെയ്യുന്ന ബട്ടൺ */
@@ -93,7 +93,7 @@
         background: #e02454;
     }
     #post-update-btn:active {
-        transform: scale(0.98); /* ക്ലിക്ക് ചെയ്യുമ്പോൾ ചെറിയൊരു അനിമേഷൻ */
+        transform: scale(0.98);
     }
 
     /* 📣 യൂസർമാർക്ക് കാണുന്ന അപ്‌ഡേറ്റ് ബോക്സുകൾ (Cards) */
@@ -103,11 +103,11 @@
         margin-bottom: 15px;
         border-radius: 12px;
         border: 1px solid #222;
-        border-left: 4px solid #ff1e42; /* ഇടത് വശത്ത് പിങ്ക് ബോർഡർ (മാസ്സ് ലുക്ക്) */
+        border-left: 4px solid #ff1e42; /* ഇടത് വശത്ത് പിങ്ക് ബോർഡർ */
         transition: transform 0.2s;
     }
     .update-card:hover {
-        transform: translateY(-2px); /* മുകളിലേക്ക് ചെറുതായി പൊന്തി നിൽക്കും */
+        transform: translateY(-2px);
     }
     .update-card p {
         margin: 0 0 10px 0;
@@ -126,8 +126,7 @@
     .update-meta i {
         margin-right: 4px;
     }
-</style>
-
+    </style>
 </head>
 <body>
 
@@ -139,17 +138,17 @@
     <div class="container">
         <!-- 🔒 infinityspot-ന് മാത്രം കാണാനുള്ള ഫോം -->
         <div id="admin-update-form" style="display: none;">
-            <textarea id="update-text" placeholder="വരാൻ പോകുന്ന പുതിയ അപ്‌ഡേറ്റുകൾ ഇവിടെ എഴുതൂ അളിയാ..."></textarea>
+            <textarea id="update-text" placeholder="New update.."></textarea>
             <button id="post-update-btn">Post Update</button>
         </div>
 
-        <!-- ലിസ്റ്റ് ഇവിടെ വരും -->
+        <!-- അപ്‌ഡേറ്റുകളുടെ ലിസ്റ്റ് ഇവിടെ ലോഡ് ആകും -->
         <div id="updates-list">
             <p style="color: #666; text-align: center;">Loading updates...</p>
         </div>
     </div>
 
-    <!-- JS കണക്ട് ചെയ്യുന്നു (Module ആയിട്ടാണ് കൊടുക്കേണ്ടത് കാരണം app.js-ൽ import/export ഉണ്ട്) -->
-    <script type="module" src="app.js"></script>
+    <!-- 💡 app.js ന് പകരം home.js കണക്ട് ചെയ്തു -->
+    <script type="module" src="home.js"></script>
 </body>
 </html>
