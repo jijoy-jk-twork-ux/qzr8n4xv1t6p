@@ -6,8 +6,8 @@ const CLOUDINARY_UPLOAD_PRESET = 'Infinity_preset';
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
 import { 
-    getFirestore, collection, addDoc, getDocs, query, orderBy, 
-    doc, deleteDoc, setDoc, updateDoc, increment, arrayUnion, arrayRemove 
+    getFirestore, collection, addDoc, getDocs, getDoc, query, orderBy, 
+    doc, deleteDoc, setDoc, updateDoc, arrayUnion, arrayRemove, increment 
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 import { getAuth, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js"; 
 
@@ -54,17 +54,12 @@ const removeFileBtn = document.getElementById('remove-file-btn');
 const submitPostBtn = document.getElementById('submit-post-btn');
 const captionInput = document.getElementById('caption-input');
 
-// 💡 Native WebView-ൽ ഗാലറി നിർബന്ധമായി ഓപ്പൺ ആകാനുള്ള കോഡ്
-if (fileInput) {
-    fileInput.setAttribute("accept", "image/*,video/*");
-}
-
 // ==========================================
 // 4. MODAL & PREVIEW CONTROLS
 // ==========================================
 if (uploadBtn) {
     uploadBtn.addEventListener('click', () => {
-        uploadModal.style.display = 'flex';
+        if (uploadModal) uploadModal.style.display = 'flex';
     });
 }
 
@@ -89,17 +84,13 @@ if (fileInput) {
                 if (dropArea) dropArea.classList.add('hidden'); 
                 if (previewContainer) previewContainer.classList.remove('hidden'); 
 
-                if (fileType.startsWith('image/')) {
-                    if (imagePreview) {
-                        imagePreview.src = e.target.result;
-                        imagePreview.classList.remove('hidden');
-                    }
+                if (fileType.startsWith('image/') && imagePreview) {
+                    imagePreview.src = e.target.result;
+                    imagePreview.classList.remove('hidden');
                     if (videoPreview) videoPreview.classList.add('hidden');
-                } else if (fileType.startsWith('video/')) {
-                    if (videoPreview) {
-                        videoPreview.src = e.target.result;
-                        videoPreview.classList.remove('hidden');
-                    }
+                } else if (fileType.startsWith('video/') && videoPreview) {
+                    videoPreview.src = e.target.result;
+                    videoPreview.classList.remove('hidden');
                     if (imagePreview) imagePreview.classList.add('hidden');
                 }
             }
@@ -131,13 +122,13 @@ function resetAndCloseModal() {
 // ==========================================
 if (submitPostBtn) {
     submitPostBtn.addEventListener('click', async () => {
-        const file = fileInput ? fileInput.files[0] : null;
-        const caption = captionInput ? captionInput.value : '';
-
-        if (!file) {
+        if (!fileInput || !fileInput.files[0]) {
             alert("Please select a photo or video!");
             return;
         }
+
+        const file = fileInput.files[0];
+        const caption = captionInput ? captionInput.value : "";
 
         submitPostBtn.innerText = "Uploading...";
         submitPostBtn.disabled = true;
@@ -183,14 +174,16 @@ async function savePostToFirebase(mediaUrl, mediaType, caption, publicId) {
         const localUserData = localStorage.getItem("infinity_user");
         let userId = "anonymous";
         let username = "Anonymous User";
-        let profilePic = "https://via.placeholder.com/40/ff1e42/ffffff?text=U";
+        let profilePic = "";
 
         if (localUserData) {
             const user = JSON.parse(localUserData);
             userId = user.uid || "anonymous";
             username = user.username || "Anonymous User";
-            profilePic = user.profilePic || profilePic;
+            profilePic = user.profilePic || user.avatar || "";
         }
+
+        const fallbackAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(username)}&background=ff1e42&color=fff&size=128`;
 
         await addDoc(collection(db, "posts"), {
             url: mediaUrl,
@@ -198,11 +191,11 @@ async function savePostToFirebase(mediaUrl, mediaType, caption, publicId) {
             caption: caption,
             public_id: publicId,
             createdAt: new Date(),
-            likes: [], // അറേ ആയി സെറ്റ് ചെയ്യുന്നു
+            likes: [],
             likeCount: 0,
             userId: userId,
             username: username,
-            profilePic: profilePic
+            profilePic: profilePic || fallbackAvatar
         });
     } catch (error) {
         console.error("Firebase saving error:", error);
@@ -250,32 +243,36 @@ async function fetchAndDisplayPosts() {
                 deleteIconHtml = `<i class="fa-regular fa-trash-can delete-icon" style="margin-left: auto; cursor: pointer; color: #ff4d4d;" data-id="${postId}"></i>`;
             }
 
+            const fallbackAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(postData.username || 'User')}&background=ff1e42&color=fff&size=128`;
+            const userPic = postData.profilePic && postData.profilePic.trim() !== "" ? postData.profilePic : fallbackAvatar;
+
             const postElement = document.createElement('article');
             postElement.classList.add('post');
             postElement.innerHTML = `
-                <div class="post-header">
-                    <img src="${postData.profilePic || 'https://via.placeholder.com/40/ff1e42/ffffff?text=U'}" alt="Profile" class="profile-pic">
-                    <span class="username">${postData.username || 'Anonymous User'}</span>
+                <div class="post-header" style="display: flex; align-items: center; gap: 10px; padding: 10px 0;">
+                    <img src="${userPic}" alt="Profile" class="profile-pic" style="width: 38px; height: 38px; border-radius: 50%; object-fit: cover;" onerror="this.src='${fallbackAvatar}'">
+                    <span class="username" style="font-weight: bold; cursor: pointer;" onclick="window.location.href='profile.html?id=${postData.userId}'">@${postData.username || 'anonymous'}</span>
                     ${deleteIconHtml}
                 </div>
                 <div class="post-media">
                     ${mediaHtml}
                 </div>
                 <div class="post-actions" style="display: flex; gap: 15px; align-items: center; padding: 10px 0 5px 0;">
-                    <i class="fa-regular fa-heart like-icon" style="cursor: pointer; font-size: 1.4rem; color: white;"></i>
+                    <i class="fa-regular fa-heart like-icon" style="cursor: pointer; font-size: 1.4rem;"></i>
                     <i class="fa-regular fa-comment comment-icon" style="cursor: pointer; font-size: 1.4rem;" onclick="openCommentSheet('${postId}')"></i>
                 </div>
                 <div class="post-details">
-                    <span class="likes-count" style="font-weight: bold; display: block; margin-bottom: 5px; font-size: 0.9rem; color: #fff;">0 likes</span>
-                    <p><strong>${postData.username || 'Anonymous User'}</strong> ${postData.caption || ""}</p>
+                    <span class="likes-count" style="font-weight: bold; display: block; margin-bottom: 2px; font-size: 0.9rem; color: #fff;">0 likes</span>
+                    <p><strong>@${postData.username || 'anonymous'}</strong> ${postData.caption || ""}</p>
                 </div>
             `;
             feedContainer.appendChild(postElement);
 
-            // 💡 പോസ്റ്റ് ഡാറ്റ കൂടി ഇവിടെ പാസ്സ് ചെയ്യുന്നു (ലൈക്ക് വർക്ക് ചെയ്യാൻ)
+            // ലൈക്ക് ഫങ്ഷൻ കണക്ട് ചെയ്യുന്നു
             setupLikeButton(postElement, postId, postData);
         });
 
+        // ഡിലീറ്റ് ഇവന്റ് ലിസണർ ബൈൻഡ് ചെയ്യുന്നു
         document.querySelectorAll('.delete-icon').forEach(button => {
             button.addEventListener('click', function() {
                 const id = this.getAttribute('data-id');
@@ -289,7 +286,7 @@ async function fetchAndDisplayPosts() {
 }
 
 // ==========================================
-// 7. LIKE BUTTON LOGIC (FIXED 🔥)
+// 7. LIKE BUTTON LOGIC (FIXED)
 // ==========================================
 async function setupLikeButton(postElement, postId, postData) {
     const likeIcon = postElement.querySelector('.like-icon');
@@ -302,57 +299,82 @@ async function setupLikeButton(postElement, postId, postData) {
     
     let currentUserId = "";
     if (localUserData) {
-        const currentUser = JSON.parse(localUserData);
-        currentUserId = currentUser.uid;
+        try {
+            const currentUser = JSON.parse(localUserData);
+            currentUserId = currentUser.uid || "";
+        } catch (e) {
+            console.error("Local storage user parse error:", e);
+        }
     }
 
-    // ലൈക്ക് അറേ കൈകാര്യം ചെയ്യുന്നു
-    const likedUsersList = Array.isArray(postData.likes) ? postData.likes : []; 
-    const totalLikes = postData.likeCount !== undefined ? postData.likeCount : likedUsersList.length;
-    
-    likesCountSpan.innerText = `${totalLikes} likes`;
+    let likedUsersList = Array.isArray(postData.likes) ? [...postData.likes] : []; 
+    let hasLiked = currentUserId ? likedUsersList.includes(currentUserId) : false;
 
-    let hasLiked = currentUserId && likedUsersList.includes(currentUserId);
-
-    // പേജ് ലോഡാകുമ്പോൾ കളർ സെറ്റ് ചെയ്യുന്നു
-    if (hasLiked) {
-        likeIcon.classList.remove('fa-regular');
-        likeIcon.classList.add('fa-solid');
-        likeIcon.style.color = '#ff3366';
-    } else {
-        likeIcon.classList.remove('fa-solid');
-        likeIcon.classList.add('fa-regular');
-        likeIcon.style.color = 'white';
+    let likedByText = postElement.querySelector('.liked-by-text');
+    if (!likedByText) {
+        likedByText = document.createElement('p');
+        likedByText.className = 'liked-by-text';
+        likedByText.style.cssText = "font-size: 0.8rem; color: #aaa; margin-top: 2px;";
+        likesCountSpan.after(likedByText);
     }
 
-    // ക്ലിക്ക് ചെയ്യുമ്പോൾ
-    likeIcon.addEventListener('click', async () => {
+    async function updateLikeUI() {
+        likesCountSpan.innerText = `${likedUsersList.length} likes`;
+
+        if (hasLiked) {
+            likeIcon.classList.remove('fa-regular');
+            likeIcon.classList.add('fa-solid');
+            likeIcon.style.color = '#ff3366';
+        } else {
+            likeIcon.classList.remove('fa-solid');
+            likeIcon.classList.add('fa-regular');
+            likeIcon.style.color = 'white';
+        }
+
+        if (likedUsersList.length > 0) {
+            const lastLikedUid = likedUsersList[likedUsersList.length - 1];
+            try {
+                const userDocSnap = await getDoc(doc(db, "users", lastLikedUid));
+                if (userDocSnap.exists()) {
+                    const userData = userDocSnap.data();
+                    const username = userData.username || "User";
+                    const othersCount = likedUsersList.length - 1;
+                    likedByText.innerText = `Liked by @${username} ${othersCount > 0 ? `and ${othersCount} others` : ''}`;
+                } else {
+                    likedByText.innerText = `Liked by ${likedUsersList.length} people`;
+                }
+            } catch (e) {
+                likedByText.innerText = `Liked by ${likedUsersList.length} people`;
+            }
+        } else {
+            likedByText.innerText = "";
+        }
+    }
+
+    await updateLikeUI();
+
+    likeIcon.onclick = async () => {
         if (!currentUserId) {
             alert("Please log in to like this post!");
             return;
         }
 
-        let displayLikes = parseInt(likesCountSpan.innerText) || 0;
+        likeIcon.style.pointerEvents = 'none';
 
         try {
             if (!hasLiked) {
-                likeIcon.classList.remove('fa-regular');
-                likeIcon.classList.add('fa-solid');
-                likeIcon.style.color = '#ff3366';
-                likesCountSpan.innerText = `${displayLikes + 1} likes`;
                 hasLiked = true;
+                likedUsersList.push(currentUserId);
+                await updateLikeUI();
 
                 await updateDoc(postDocRef, {
                     likeCount: increment(1),
                     likes: arrayUnion(currentUserId)
                 });
-
             } else {
-                likeIcon.classList.remove('fa-solid');
-                likeIcon.classList.add('fa-regular');
-                likeIcon.style.color = 'white';
-                likesCountSpan.innerText = `${Math.max(0, displayLikes - 1)} likes`;
                 hasLiked = false;
+                likedUsersList = likedUsersList.filter(id => id !== currentUserId);
+                await updateLikeUI();
 
                 await updateDoc(postDocRef, {
                     likeCount: increment(-1),
@@ -360,14 +382,18 @@ async function setupLikeButton(postElement, postId, postData) {
                 });
             }
         } catch (error) {
+            console.error("Like error:", error);
             hasLiked = !hasLiked;
-            likesCountSpan.innerText = `${displayLikes} likes`;
-            likeIcon.classList.toggle('fa-solid');
-            likeIcon.classList.toggle('fa-regular');
-            likeIcon.style.color = hasLiked ? '#ff3366' : 'white';
-            console.error("Like Error:", error);
+            if (hasLiked) {
+                likedUsersList.push(currentUserId);
+            } else {
+                likedUsersList = likedUsersList.filter(id => id !== currentUserId);
+            }
+            await updateLikeUI();
+        } finally {
+            likeIcon.style.pointerEvents = 'auto';
         }
-    });
+    };
 }
 
 // ==========================================
@@ -397,7 +423,7 @@ window.handleRegisterUser = async (email, password, username) => {
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         const user = userCredential.user;
         const newUid = user.uid;
-        const defaultProfilePic = "https://via.placeholder.com/40/ff1e42/ffffff?text=U";
+        const defaultProfilePic = `https://ui-avatars.com/api/?name=${encodeURIComponent(formattedUsername)}&background=ff1e42&color=fff&size=128`;
 
         await setDoc(doc(db, "users", newUid), {
             uid: newUid,
@@ -439,8 +465,10 @@ document.addEventListener("DOMContentLoaded", () => {
         if (userDisplay) {
             userDisplay.innerText = `@${currentUserData.username}`;
         }
-        if (profileDisplay && currentUserData.profilePic) {
-            profileDisplay.src = currentUserData.profilePic;
+        if (profileDisplay) {
+            const fallbackAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(currentUserData.username)}&background=ff1e42&color=fff&size=128`;
+            profileDisplay.src = currentUserData.profilePic || currentUserData.avatar || fallbackAvatar;
+            profileDisplay.onerror = function() { this.src = fallbackAvatar; };
         }
     }
 });
@@ -456,7 +484,101 @@ export function handleLogout() {
 }
 
 // ==========================================
-// 12. COMMENT LOGIC
+// 12. ANNOUNCEMENTS LOGIC
+// ==========================================
+if (window.location.pathname.includes("announcement.html")) {
+    document.addEventListener("DOMContentLoaded", () => {
+        const adminForm = document.getElementById("admin-update-form");
+        
+        if (currentUserData) {
+            const loggedUsername = currentUserData.username.trim().toLowerCase();
+            if (loggedUsername === "infinityspot") {
+                if (adminForm) adminForm.style.display = "block";
+            }
+        }
+
+        fetchAnnouncements();
+
+        const postUpdateBtn = document.getElementById("post-update-btn");
+        if (postUpdateBtn) {
+            postUpdateBtn.addEventListener("click", postNewAnnouncement);
+        }
+    });
+}
+
+async function postNewAnnouncement() {
+    const updateTextInput = document.getElementById("update-text");
+    if (!updateTextInput || !updateTextInput.value.trim()) {
+        alert("Start typing... !");
+        return;
+    }
+
+    try {
+        if (!currentUserData || currentUserData.username.trim().toLowerCase() !== "infinityspot") {
+            alert("You don't have permission!");
+            return;
+        }
+
+        await addDoc(collection(db, "announcements"), {
+            text: updateTextInput.value.trim(),
+            createdAt: new Date(),
+            postedBy: "Developer"
+        });
+
+        updateTextInput.value = "";
+        alert("Your update has been posted");
+        fetchAnnouncements(); 
+
+    } catch (error) {
+        console.error("Error:", error);
+        alert("Failed to post: " + error.message);
+    }
+}
+
+async function fetchAnnouncements() {
+    const updatesList = document.getElementById("updates-list");
+    if (!updatesList) return;
+
+    try {
+        const q = query(collection(db, "announcements"), orderBy("createdAt", "desc"));
+        const querySnapshot = await getDocs(q);
+
+        updatesList.innerHTML = "";
+
+        if (querySnapshot.empty) {
+            updatesList.innerHTML = "<p style='color:#666; text-align:center;'>No updates available!</p>";
+            return;
+        }
+
+        querySnapshot.forEach((docSnap) => {
+            const data = docSnap.data();
+            
+            let displayDate = "";
+            if (data.createdAt) {
+                const t = data.createdAt.toDate ? data.createdAt.toDate() : new Date(data.createdAt.seconds * 1000);
+                displayDate = t.toLocaleDateString() + " " + t.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+            }
+
+            const card = document.createElement("div");
+            card.className = "update-card";
+            card.innerHTML = `
+                <p>${data.text}</p>
+                <div class="update-meta">
+                    <span><i class="fa-solid fa-user-shield"></i> ${data.postedBy}</span>
+                    <span><i class="fa-regular fa-clock"></i> ${displayDate}</span>
+                </div>
+            `;
+            updatesList.appendChild(card);
+        });
+
+    } catch (error) {
+        console.error("Error:", error);
+        updatesList.innerHTML = "<p style='color:red; text-align:center;'>Failed to load!</p>";
+    }
+}
+
+// ==========================================
+// 13. COMMENT LOGIC
 // ==========================================
 window.openCommentSheet = function(postId) {
     const sheet = document.getElementById('comment-sheet');
@@ -469,7 +591,9 @@ window.openCommentSheet = function(postId) {
         sheet.classList.add('show');
     }, 10);
 
-    window.loadCommentsForPost(postId);
+    if (typeof window.loadCommentsForPost === 'function') {
+        window.loadCommentsForPost(postId);
+    }
 };
 
 window.loadCommentsForPost = async function(postId) {
@@ -488,19 +612,23 @@ window.loadCommentsForPost = async function(postId) {
         container.innerHTML = "";
 
         if (querySnapshot.empty) {
-            container.innerHTML = '<p class="no-comments">No comments yet. Start the conversation!</p>';
+            container.innerHTML = '<p class="no-comments" style="text-align:center; color:#888; padding:20px;">No comments yet. Start the conversation!</p>';
             return;
         }
 
         querySnapshot.forEach((docSnap) => {
             const commentData = docSnap.data();
-            
+            const fallbackAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(commentData.username || 'User')}&background=ff1e42&color=fff&size=128`;
+            const cPic = commentData.profilePic || fallbackAvatar;
+
             const commentItem = document.createElement('div');
             commentItem.className = 'comment-item';
+            commentItem.style.cssText = "display: flex; gap: 10px; margin-bottom: 12px; align-items: flex-start;";
             commentItem.innerHTML = `
+                <img src="${cPic}" class="comment-user-pic" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover;" onerror="this.src='${fallbackAvatar}'">
                 <div class="comment-details">
-                    <strong>@${commentData.username || 'anonymous'}</strong>
-                    <p>${commentData.text}</p>
+                    <strong style="font-size: 0.85rem; color: #fff;">@${commentData.username || 'anonymous'}</strong>
+                    <p style="font-size: 0.85rem; color: #ddd; margin-top: 2px;">${commentData.text}</p>
                 </div>
             `;
             container.appendChild(commentItem);
@@ -510,9 +638,9 @@ window.loadCommentsForPost = async function(postId) {
 
     } catch (error) {
         console.error("Error loading comments:", error);
-        container.innerHTML = "<p style='color:red; text-align:center;'>Comments ലോഡ് ചെയ്യാൻ പറ്റിയില്ല!</p>";
+        container.innerHTML = "<p style='color:red; text-align:center;'>Failed to load comments!</p>";
     }
-}
+};
 
 document.addEventListener("DOMContentLoaded", () => {
     const sheet = document.getElementById('comment-sheet');
@@ -531,44 +659,42 @@ document.addEventListener("DOMContentLoaded", () => {
     if (closeBtn) closeBtn.addEventListener('click', closeCommentSheet);
     if (overlay) overlay.addEventListener('click', closeCommentSheet);
 
-    if (submitCommentBtn) {
+    if (submitCommentBtn && commentInput) {
         submitCommentBtn.addEventListener('click', async () => {
             const text = commentInput.value.trim();
-            const postId = window.currentActivePostId; 
+            const postId = window.currentActivePostId;
 
             if (!text) return;
-            
-            const localUserData = localStorage.getItem("infinity_user");
-            if (!localUserData) {
-                alert("കമന്റ് ഇടാൻ ആദ്യം ലോഗിൻ ചെയ്യണം!");
-                return;
-            }
-
-            if (!postId) { 
-                alert("Error: "); 
-                return; 
-            }
+            if (!postId) { alert("Error: Post ID missing!"); return; }
 
             submitCommentBtn.disabled = true;
 
             try {
-                const user = JSON.parse(localUserData);
-                const username = user.username || "Anonymous";
-                const profilePic = user.profilePic || "https://via.placeholder.com/40/ff1e42/ffffff?text=U";
+                const localUserData = localStorage.getItem("infinity_user");
+                let username = "Anonymous";
+                let profilePic = "";
+
+                if (localUserData) {
+                    const user = JSON.parse(localUserData);
+                    username = user.username || "Anonymous";
+                    profilePic = user.profilePic || user.avatar || "";
+                }
+
+                const fallbackAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(username)}&background=ff1e42&color=fff&size=128`;
 
                 await addDoc(collection(db, "posts", postId, "comments"), {
                     text: text,
                     username: username,
-                    profilePic: profilePic,
+                    profilePic: profilePic || fallbackAvatar,
                     createdAt: new Date()
                 });
 
-                commentInput.value = ""; 
-                window.loadCommentsForPost(postId); 
+                commentInput.value = "";
+                loadCommentsForPost(postId);
 
             } catch (error) {
-                console.error("Detailed error posting comment:", error);
-                alert(" : " + error.message);
+                console.error("Error posting comment:", error);
+                alert("You are not allowed to comment!");
             } finally {
                 submitCommentBtn.disabled = false;
             }
@@ -576,5 +702,5 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 });
 
-// ആദ്യ ലോഡിങ്ങിൽ ഫീഡ് ലോഡ് ചെയ്യുന്നു
+// ഫീഡ് പേജ് ലോഡ് ആകുമ്പോൾ പോസ്റ്റുകൾ ലോഡ് ചെയ്യും
 fetchAndDisplayPosts();
