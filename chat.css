@@ -1,25 +1,245 @@
-* { box-sizing: border-box; margin: 0; padding: 0; font-family: sans-serif; }
-body { background-color: #f0f2f5; display: flex; justify-content: center; align-items: center; height: 100vh; }
-
-.chat-container { width: 100%; max-width: 450px; height: 90vh; background: #fff; display: flex; flex-direction: column; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); overflow: hidden; }
-.chat-header { background: #ff4757; color: white; padding: 15px; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-.chat-header-info { display: flex; flex-direction: column; align-items: center; }
-.chat-box {
-    flex: 1;
-    padding: 15px;
-    overflow-y: auto;
-    background: #efe7dd;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    min-height: 200px; /* ബോക്സ് ചുരുങ്ങി പോകാതിരിക്കാൻ */
+* { 
+    box-sizing: border-box; 
+    margin: 0; 
+    padding: 0; 
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
 }
 
-.message { padding: 9px 14px; border-radius: 15px; max-width: 75%; font-size: 0.95rem; word-wrap: break-word; line-height: 1.4; }
-.sent { background: #d9fdd3; color: #000; align-self: flex-end; border-top-right-radius: 2px; box-shadow: 0 1px 1px rgba(0,0,0,0.1); }
-.received { background: #fff; color: #000; align-self: flex-start; border-top-left-radius: 2px; box-shadow: 0 1px 1px rgba(0,0,0,0.1); }
+body { 
+    background-color: #0a0a0a; 
+    display: flex; 
+    justify-content: center; 
+    align-items: center; 
+    height: 100vh; 
+    color: #fff;
+}
 
-.input-area { display: flex; padding: 10px; background: #f0f0f0; border-top: 1px solid #ddd; }
-#message-input { flex: 1; padding: 12px; border: 1px solid #ccc; border-radius: 25px; outline: none; font-size: 0.95rem; padding-left: 15px; }
-#send-btn { background: #ff4757; color: white; border: none; padding: 0 20px; margin-left: 8px; cursor: pointer; border-radius: 25px; font-weight: bold; transition: 0.2s; }
-#send-btn:hover { background: #e04050; }
+.chat-container { 
+    width: 100%; 
+    max-width: 450px; 
+    height: 100vh; 
+    background: #121212; 
+    display: flex; 
+    flex-direction: column; 
+    border-right: 1px solid #222;
+    border-left: 1px solid #222;
+    overflow: hidden; 
+}
+
+/* 🔴 Red & Grey Header Design */
+.chat-header { 
+    background: #1a1a1a; 
+    color: #fff; 
+    padding: 12px 16px; 
+    display: flex; 
+    align-items: center; 
+    gap: 12px;
+    border-bottom: 1px solid #2a2a2a;
+}
+
+.back-btn {
+    background: none;
+    border: none;
+    color: #ff1e42;
+    font-size: 1.1rem;
+    cursor: pointer;
+    padding: 5px;
+}
+
+.user-header-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.header-avatar {
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid #ff1e42;
+}
+
+.chat-header-text h3 {
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+.chat-header-text small {
+    color: #888;
+    font-size: 0.75rem;
+}
+
+/* 💬 Chat Box Screen */
+.chat-box { 
+    flex: 1; 
+    padding: 16px; 
+    overflow-y: auto; 
+    background: #0d0d0d; 
+    display: flex; 
+    flex-direction: column; 
+    gap: 12px; 
+}
+
+.message { 
+    padding: 10px 14px; 
+    border-radius: 16px; 
+    max-width: 78%; 
+    font-size: 0.92rem; 
+    word-wrap: break-word; 
+    line-height: 1.4; 
+}
+
+/* Sent & Received Styles */
+.sent { 
+    background: #ff1e42; 
+    color: #fff; 
+    align-self: flex-end; 
+    border-bottom-right-radius: 4px; 
+}
+
+.received { 
+    background: #242424; 
+    color: #e0e0e0; 
+    align-self: flex-start; 
+    border-bottom-left-radius: 4px; 
+    border: 1px solid #333;
+}
+
+/* 🎬 Shared Reel Box Styling */
+.reel-message-box {
+    padding: 6px !important;
+    background: #1e1e1e !important;
+    border: 1px solid #333;
+    max-width: 220px !important;
+}
+
+.shared-reel-card {
+    cursor: pointer;
+    border-radius: 12px;
+    overflow: hidden;
+    background: #000;
+}
+
+.reel-preview-media {
+    position: relative;
+    width: 100%;
+    height: 200px;
+    background: #111;
+}
+
+.reel-preview-media video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.play-icon {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 2rem;
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.reel-card-info {
+    padding: 8px;
+}
+
+.reel-badge {
+    font-size: 0.7rem;
+    color: #ff1e42;
+    font-weight: bold;
+    text-transform: uppercase;
+}
+
+.reel-caption {
+    font-size: 0.8rem;
+    color: #ccc;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* 🎙️ Voice Message Styling */
+.voice-player audio {
+    width: 180px;
+    height: 32px;
+}
+
+/* ⌨️ Input Area */
+.input-area { 
+    display: flex; 
+    align-items: center;
+    padding: 10px 14px; 
+    background: #181818; 
+    border-top: 1px solid #2a2a2a; 
+    gap: 8px;
+}
+
+#message-input { 
+    flex: 1; 
+    padding: 10px 14px; 
+    background: #242424;
+    border: 1px solid #333; 
+    border-radius: 20px; 
+    outline: none; 
+    color: #fff;
+    font-size: 0.9rem; 
+}
+
+#message-input:focus {
+    border-color: #ff1e42;
+}
+
+.icon-btn {
+    background: none;
+    border: none;
+    color: #888;
+    font-size: 1.1rem;
+    cursor: pointer;
+    padding: 8px;
+    transition: color 0.2s;
+}
+
+.icon-btn.recording {
+    color: #ff1e42;
+    animation: pulse 1s infinite;
+}
+
+#send-btn { 
+    background: #ff1e42; 
+    color: white; 
+    border: none; 
+    width: 38px;
+    height: 38px;
+    cursor: pointer; 
+    border-radius: 50%; 
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: 0.2s; 
+}
+
+#send-btn:hover { 
+    background: #e01b3a; 
+}
+
+.user-select-dropdown {
+    margin: 15px auto; 
+    display: block; 
+    padding: 10px; 
+    border-radius: 20px; 
+    border: 1px solid #333; 
+    width: 85%; 
+    background: #222; 
+    color: #fff;
+    font-size: 0.9rem;
+}
+
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+    100% { transform: scale(1); }
+}
