@@ -71,18 +71,28 @@ body {
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
 }
 
+/* ------------------------------------------
+   FIXED: POST HEADER & DELETE ICON ALIGNMENT
+   ------------------------------------------ */
 .post-header {
     display: flex;
     align-items: center;
+    justify-content: space-between; /* ഡെലീറ്റ് ബട്ടൺ വലതുവശത്ത് കൃത്യമായി നിൽക്കാൻ */
     padding: 12px;
     background: #1a1a1a;
+}
+
+/* പ്രൊഫൈൽ ചിത്രവും യൂസർനെയിമും ചേർത്തു നിർത്താൻ */
+.post-header-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
 }
 
 .profile-pic {
     width: 36px;
     height: 36px;
     border-radius: 50%;
-    margin-right: 10px;
     object-fit: cover;
     border: 2px solid #ff1e42; 
 }
@@ -92,6 +102,21 @@ body {
     font-size: 14px;
     color: #ffffff;
 }
+
+/* ഡെലീറ്റ് ഐക്കൺ സ്റ്റൈലിംഗ് */
+.delete-btn {
+    color: #ff1e42;
+    cursor: pointer;
+    font-size: 18px;
+    transition: opacity 0.2s, transform 0.2s;
+}
+
+.delete-btn:hover {
+    opacity: 0.8;
+    transform: scale(1.1);
+}
+
+/* ------------------------------------------ */
 
 /* ഇമേജ്/വീഡിയോ സൈസ് കറക്റ്റ് ആക്കാൻ */
 .main-media {
