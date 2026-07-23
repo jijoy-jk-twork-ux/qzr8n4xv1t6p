@@ -223,7 +223,7 @@ window.submitBadgeApplication = async function(event) {
             }).catch(e => console.error("Google Script Fetch Error:", e));
         }
 
-        alert("🎉 Creator Badge Application Submitted Successfully!");
+        alert("🎉 Creator Badge Application Submitted Successfully. We will update you via email within 2–3 business days!");
         const badgeForm = document.getElementById("badgeForm");
         if (badgeForm) badgeForm.reset();
         closeBadgeModal();
@@ -246,20 +246,31 @@ async function checkVerificationStatus() {
     if (!statusTag || !submitBtn) return;
 
     try {
+        // 🔹 1. ലോഗിൻ ചെയ്ത യൂസറുടെ ഐഡി ഉറപ്പാക്കുന്നു
+        const localUserData = localStorage.getItem("infinity_user");
+        if (!localUserData) return;
+        const currentUserId = JSON.parse(localUserData).uid;
+
+        if (!currentUserId) return;
+
+        // 🔹 2. ആദ്യം users കളക്ഷനിൽ ചെക്ക് ചെയ്യുന്നു
         const userDocRef = doc(db, "users", currentUserId);
         const userDocSnap = await getDoc(userDocRef);
 
         if (userDocSnap.exists()) {
             const userData = userDocSnap.data();
+            
+            // യൂസർ Verified ആണെങ്കിൽ direct ആയി return ചെയ്യും (പിന്നീട് verification_requests ചെക്ക് ചെയ്യില്ല)
             if (userData.isVerified === true || userData.isVerified === "true") {
                 statusTag.innerText = "✓ Verified Creator";
                 statusTag.className = "status-badge status-verified";
                 submitBtn.innerText = "Already Verified";
                 submitBtn.disabled = true;
-                return;
+                return; // 🛑 ഇവിടെ വെച്ച് സ്റ്റോപ്പ് ആകും!
             }
         }
 
+        // 🔹 3. Verified അല്ലെങ്കിൽ മാത്രം verification_requests നോക്കുന്നു
         const q = query(
             collection(db, "verification_requests"), 
             where("userId", "==", currentUserId)
@@ -267,11 +278,13 @@ async function checkVerificationStatus() {
         const querySnapshot = await getDocs(q);
 
         if (!querySnapshot.empty) {
+            // അപ്ലിക്കേഷൻ അയച്ചിട്ടുണ്ട്, അഡ്മിൻ ഇതുവരെ Approve ചെയ്തിട്ടില്ല
             statusTag.innerText = "⏳ Under Review";
             statusTag.className = "status-badge status-pending";
             submitBtn.innerText = "Application Submitted";
             submitBtn.disabled = true;
         } else {
+            // അപ്ലിക്കേഷൻ ഒന്നും അയച്ചിട്ടില്ല
             statusTag.innerText = "Not Verified";
             statusTag.className = "status-badge status-unverified";
             submitBtn.innerText = "Submit Application";
@@ -282,6 +295,7 @@ async function checkVerificationStatus() {
         console.error("Error checking verification status:", error);
     }
 }
+
 
 // 6. Report Issue
 window.reportIssue = async function() {
