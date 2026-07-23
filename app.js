@@ -9,7 +9,7 @@ import {
     getFirestore, collection, addDoc, getDocs, getDoc, query, orderBy, 
     doc, deleteDoc, setDoc, updateDoc, arrayUnion, arrayRemove, increment 
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-import { getAuth, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js"; 
+import { getAuth, createUserWithEmailAndPassword, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
 const firebaseConfig = {
     apiKey: "AIzaSyCNQaHi-L3fninLxkePZBaNR7vu6JiYEwQ",
@@ -23,6 +23,24 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const auth = getAuth(app);
+
+console.log("Firebase Connected successfully!");
+
+// 🔹 SILENT / ANONYMOUS BACKGROUND AUTH
+onAuthStateChanged(auth, (user) => {
+    if (!user) {
+        // ലോഗിൻ ചെയ്തിട്ടില്ലെങ്കിൽ തനിയെ Anonymous Guest ആയി ലോഗിൻ ചെയ്യിക്കുന്നു
+        signInAnonymously(auth)
+            .then(() => console.log("Guest Session active 🎭"))
+            .catch((err) => console.error("Anonymous Auth Error:", err));
+    } else {
+        console.log("Active User UID:", user.uid, "| Is Anonymous:", user.isAnonymous);
+    }
+});
+
 
 console.log("Firebase Connected successfully!");
 
