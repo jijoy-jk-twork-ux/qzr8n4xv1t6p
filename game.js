@@ -27,15 +27,25 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-// Open License Sound Effects (Royalty Free)
+// Open License Sound Effects
 const winSound = new Audio("https://assets.mixkit.co/active_storage/sfx/1435/1435-preview.mp3");
 const loseSound = new Audio("https://assets.mixkit.co/active_storage/sfx/253/253-preview.mp3");
 const clickSound = new Audio("https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3");
 
-let currentUserId = localStorage.getItem("userUid");
+// 🔹 1. ലോഗിൻ ചെയ്ത യഥാർത്ഥ യൂസറുടെ UID എടുക്കുന്നു (Fix for USER_xxxx)
+let currentUserId = null;
+const localUserData = localStorage.getItem("infinity_user") || localStorage.getItem("user");
+if (localUserData) {
+    try {
+        const parsed = JSON.parse(localUserData);
+        currentUserId = parsed.uid || parsed.id;
+    } catch (e) {
+        currentUserId = localStorage.getItem("userUid");
+    }
+}
+
 if (!currentUserId) {
-    currentUserId = "USER_" + Math.floor(Math.random() * 10000);
-    localStorage.setItem("userUid", currentUserId);
+    currentUserId = localStorage.getItem("userUid");
 }
 
 let roomId = null;
@@ -45,7 +55,7 @@ let boardState = ["", "", "", "", "", "", "", "", ""];
 let lastEmojiTimestamp = 0;
 let roomUnsubscribe = null;
 
-// 1. 🏆 TOP PLAYER REALTIME UPDATE
+// 🔹 2. TOP PLAYER REALTIME UPDATE (Name Fix)
 function loadTopPlayer() {
     const q = query(collection(db, "users"), orderBy("wins", "desc"), limit(1));
     onSnapshot(q, (snapshot) => {
@@ -53,7 +63,11 @@ function loadTopPlayer() {
         if (banner) {
             if (!snapshot.empty) {
                 const topUser = snapshot.docs[0].data();
-                banner.innerHTML = `👑 Top Player: <b>${topUser.username || "Unknown"}</b> (${topUser.wins || 0} Wins)`;
+                // username അല്ലെങ്കിൽ name അല്ലെങ്കിൽ displayName ഫയർബേസിൽ നിന്ന് എടുക്കുന്നു
+                const displayName = topUser.username || topUser.name || topUser.displayName || "Anonymous Player";
+                const winsCount = topUser.wins || 0;
+                
+                banner.innerHTML = `👑 Top Player: <b>${displayName}</b> (${winsCount} Wins)`;
             } else {
                 banner.innerHTML = "👑 Top Player: No Leaders Yet";
             }
@@ -62,9 +76,13 @@ function loadTopPlayer() {
 }
 loadTopPlayer();
 
-// 2. 🔍 AUTOMATIC MATCHMAKING FUNCTION
+// 🔹 3. AUTOMATIC MATCHMAKING
 async function startMatchmaking() {
-    // UI റിസെറ്റ് ചെയ്യൽ
+    if (!currentUserId) {
+        alert("Please login first!");
+        return;
+    }
+
     document.getElementById("board").style.display = "none";
     document.getElementById("emoji-bar").style.display = "none";
     document.getElementById("status").innerText = "Searching for opponent...";
@@ -134,9 +152,12 @@ async function startMatchmaking() {
     }
 }
 
-document.getElementById("find-btn").addEventListener("click", startMatchmaking);
+const findBtn = document.getElementById("find-btn");
+if (findBtn) {
+    findBtn.addEventListener("click", startMatchmaking);
+}
 
-// 3. 🎲 GAME ROOM & OPPONENT USERNAME FETCH
+// 🔹 4. GAME ROOM & OPPONENT USERNAME FETCH (Fix for Opponent Name)
 function setupRoom(rId) {
     if (roomUnsubscribe) roomUnsubscribe();
 
@@ -150,14 +171,14 @@ function setupRoom(rId) {
                 document.getElementById("board").style.display = "grid";
                 document.getElementById("emoji-bar").style.display = "flex";
 
-                // ഓപ്പോണന്റിന്റെ ID എടുത്ത് പേര് കണ്ടെത്തുന്നു
                 const opponentId = (data.player1 === currentUserId) ? data.player2 : data.player1;
                 let opponentName = "Opponent";
 
                 if (opponentId) {
                     const oppSnap = await getDoc(doc(db, "users", opponentId));
                     if (oppSnap.exists()) {
-                        opponentName = oppSnap.data().username || "Opponent";
+                        const oppData = oppSnap.data();
+                        opponentName = oppData.username || oppData.name || oppData.displayName || "Opponent";
                     }
                 }
 
@@ -181,7 +202,7 @@ function setupRoom(rId) {
     });
 }
 
-// 4. UI UPDATE
+// 🔹 5. UI UPDATE
 function updateUI() {
     const cells = document.querySelectorAll(".cell");
     cells.forEach((cell, index) => {
@@ -214,7 +235,7 @@ document.querySelectorAll(".cell").forEach(cell => {
     });
 });
 
-// 5. 😀 EMOJI SENDING
+// 🔹 6. EMOJI SENDING
 window.sendEmoji = async function(emoji) {
     if (!roomId) return;
     
@@ -240,7 +261,7 @@ function showFloatingEmoji(emoji) {
     }, 2000);
 }
 
-// 6. 🏆 WINNER CHECK, SOUND & AUTOMATIC AUTO-REDIRECT (4 Sec)
+// 🔹 7. WINNER CHECK & SCORE UPDATE
 async function checkWinner() {
     const winPatterns = [
         [0, 1, 2], [3, 4, 5], [6, 7, 8],
@@ -263,7 +284,6 @@ async function checkWinner() {
                 showResultBanner("❌ YOU LOST! Finding next opponent in 4s...", "red");
             }
 
-            // 4 സെക്കന്റുകൾക്ക് ശേഷം തനിയെ അടുത്ത പ്ലെയറെ തിരയാൻ പോകുന്നു
             setTimeout(() => {
                 startMatchmaking();
             }, 4000);
@@ -288,6 +308,7 @@ function showResultBanner(msg, color) {
 }
 
 async function updateUserWins() {
+    if (!currentUserId) return;
     try {
         const userRef = doc(db, "users", currentUserId);
         await updateDoc(userRef, {
