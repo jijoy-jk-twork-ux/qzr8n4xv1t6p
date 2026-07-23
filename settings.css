@@ -382,3 +382,36 @@ input:checked + .slider:before {
     opacity: 0.9;
     transform: scale(0.99);
 }
+/* Base Style for Badge */
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 14px;
+  font-weight: 600;
+  text-transform: capitalize;
+  transition: all 0.3s ease;
+}
+
+/* 🟢 Verified (Green) */
+.status-badge.status-verified {
+  background-color: #d1e7dd;
+  color: #0f5132;
+  border: 1px solid #badbcc;
+}
+
+/* 🟠 Pending (Orange) */
+.status-badge.status-pending {
+  background-color: #fff3cd;
+  color: #664d03;
+  border: 1px solid #ffecb5;
+}
+
+/* 🔴 Not Verified / Rejected (Red/Grey) */
+.status-badge.status-not-verified {
+  background-color: #f8d7da;
+  color: #842029;
+  border: 1px solid #f5c2c7;
+}
