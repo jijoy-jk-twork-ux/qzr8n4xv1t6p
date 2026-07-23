@@ -280,12 +280,16 @@ input:checked + .slider:before {
     color: #aaaaaa;
 }
 
+/* ⏳ അണ്ടർ റിവ്യൂ (Orange) */
 .status-pending {
-    background-color: #e6a23c;
-    color: #ffffff;
+    background-color: rgba(230, 162, 60, 0.2);
+    color: #e6a23c;
+    border: 1px solid #e6a23c;
 }
 
+/* ✅ റിവ്യൂ കഴിഞ്ഞ് അപ്രൂവ് ആയാൽ (Green) */
 .status-verified {
-    background-color: #0095f6;
-    color: #ffffff;
+    background-color: rgba(40, 167, 69, 0.2);
+    color: #28a745;
+    border: 1px solid #28a745;
 }
