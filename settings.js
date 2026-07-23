@@ -7,9 +7,10 @@ import {
     updateDoc, 
     collection, 
     addDoc,
-    query,       
-    where,       
-    getDocs      
+    query,
+    where,
+    getDocs,
+    serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
 const firebaseConfig = { 
@@ -24,13 +25,16 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
+// 🔑 Secret Passcode for Music Upload
+const SECRET_PASSCODE = "2425";
+
 let currentUserId = localStorage.getItem("userUid");
 if (!currentUserId) {
     currentUserId = "USER_" + Math.floor(Math.random() * 10000);
     localStorage.setItem("userUid", currentUserId);
 }
 
-// 1. ഫയർബേസിൽ നിന്ന് യൂസറുടെ സെറ്റിംഗ്സും അക്കൗണ്ട് വിവരങ്ങളും ലോഡ് ചെയ്യുന്നു
+// 1. ഫയർബേസിൽ നിന്ന് യൂസറുടെ സെറ്റിംഗ്സ് ഡാറ്റ ലോഡ് ചെയ്യുന്നു
 async function loadUserSettings() {
     try {
         const userRef = doc(db, "users", currentUserId);
@@ -39,31 +43,24 @@ async function loadUserSettings() {
         if (docSnap.exists()) {
             const data = docSnap.data();
             
-            // Account Center Banner Update (Username, Wins)
-            const displayUser = data.username || currentUserId;
-            if(document.getElementById("acc-username")) {
-                document.getElementById("acc-username").innerText = `@${displayUser} • ${data.wins || 0} Wins`;
-            }
+            // Account Center Banner Update
+            document.getElementById("acc-username").innerText = `@${data.username || currentUserId} • ${data.wins || 0} Wins`;
 
             // Toggles load
             if (data.settings) {
-                if (document.getElementById("setting-mentions")) document.getElementById("setting-mentions").checked = data.settings.allowMentions || false;
-                if (document.getElementById("setting-muted")) document.getElementById("setting-muted").checked = data.settings.isMuted || false;
-                if (document.getElementById("setting-datasaver")) document.getElementById("setting-datasaver").checked = data.settings.dataSaver || false;
-                if (document.getElementById("setting-family")) document.getElementById("setting-family").checked = data.settings.familyMode || false;
-                if (document.getElementById("setting-messages") && data.settings.messages) {
+                document.getElementById("setting-mentions").checked = data.settings.allowMentions || false;
+                document.getElementById("setting-muted").checked = data.settings.isMuted || false;
+                document.getElementById("setting-datasaver").checked = data.settings.dataSaver || false;
+                document.getElementById("setting-family").checked = data.settings.familyMode || false;
+                if (data.settings.messages) {
                     document.getElementById("setting-messages").value = data.settings.messages;
                 }
             }
         } else {
-            // പുതിയ യൂസർമാർക്കായി ബോക്സ് ക്രിയേറ്റ് ചെയ്യുന്നു
             await setDoc(userRef, {
                 username: "User_" + Math.floor(Math.random() * 1000),
-                name: "User Name",
-                email: "user@example.com",
                 wins: 0,
-                bio: "Welcome to my Spymo profile!",
-                isVerified: false,
+                bio: "",
                 settings: {
                     allowMentions: true,
                     isMuted: false,
@@ -75,65 +72,11 @@ async function loadUserSettings() {
             loadUserSettings();
         }
     } catch (e) {
-        console.error("Error loading user settings: ", e);
+        console.error("Error loading settings:", e);
     }
 }
 
-// 2. 💎 Account Center Pop-up Logic
-window.openAccountCenter = async function() {
-    try {
-        const userRef = doc(db, "users", currentUserId);
-        const docSnap = await getDoc(userRef);
-        
-        if (docSnap.exists()) {
-            const d = docSnap.data();
-            
-            if (document.getElementById("accUserId")) document.getElementById("accUserId").value = currentUserId;
-            if (document.getElementById("accDisplayUsername")) document.getElementById("accDisplayUsername").value = d.username || "";
-            if (document.getElementById("accDisplayName")) document.getElementById("accDisplayName").value = d.name || "";
-            if (document.getElementById("accDisplayEmail")) document.getElementById("accDisplayEmail").value = d.email || "";
-            if (document.getElementById("accBio")) document.getElementById("accBio").value = d.bio || "";
-            if (document.getElementById("accWins")) document.getElementById("accWins").value = d.wins || 0;
-            
-            document.getElementById("accountModal").style.display = "flex";
-        }
-    } catch (e) {
-        console.error("Error opening account modal: ", e);
-    }
-};
-
-window.closeAccountModal = function() {
-    document.getElementById("accountModal").style.display = "none";
-};
-
-// അക്കൗണ്ട് വിവരങ്ങൾ അപ്‌ഡേറ്റ് ചെയ്യുന്നു
-window.saveAccountDetails = async function(event) {
-    event.preventDefault();
-    
-    const newUsername = document.getElementById("accDisplayUsername") ? document.getElementById("accDisplayUsername").value : "";
-    const newName = document.getElementById("accDisplayName") ? document.getElementById("accDisplayName").value : "";
-    const newEmail = document.getElementById("accDisplayEmail") ? document.getElementById("accDisplayEmail").value : "";
-    const newBio = document.getElementById("accBio") ? document.getElementById("accBio").value : "";
-    
-    try {
-        const userRef = doc(db, "users", currentUserId);
-        await updateDoc(userRef, { 
-            username: newUsername,
-            name: newName,
-            email: newEmail,
-            bio: newBio 
-        });
-        
-        alert("✅ Account details saved successfully!");
-        closeAccountModal();
-        loadUserSettings(); 
-    } catch (e) {
-        console.error("Save error: ", e);
-        alert("❌ Failed to save changes.");
-    }
-};
-
-// 3. സെറ്റിംഗ്സ് ടോഗിളുകൾ
+// 2. സെറ്റിംഗ്സ് ടോഗിളുകൾ ഫയർബേസിലേക്ക് ഓട്ടോ-സേവ് ചെയ്യുന്നു
 window.toggleSetting = async function(key, value) {
     try {
         const userRef = doc(db, "users", currentUserId);
@@ -149,7 +92,41 @@ window.updateSetting = async function(key, value) {
     window.toggleSetting(key, value);
 };
 
-// 4. Invite Share
+// 3. 💎 Account Center Pop-up Logic
+window.openAccountCenter = async function() {
+    const userRef = doc(db, "users", currentUserId);
+    const docSnap = await getDoc(userRef);
+    if (docSnap.exists()) {
+        const d = docSnap.data();
+        document.getElementById("accUserId").value = currentUserId;
+        document.getElementById("accDisplayUsername").value = d.username || currentUserId;
+        document.getElementById("accBio").value = d.bio || "";
+        document.getElementById("accWins").value = d.wins || 0;
+        
+        document.getElementById("accountModal").style.display = "flex";
+    }
+};
+
+window.closeAccountModal = function() {
+    document.getElementById("accountModal").style.display = "none";
+};
+
+window.saveAccountDetails = async function(event) {
+    event.preventDefault();
+    const bio = document.getElementById("accBio").value;
+    
+    try {
+        const userRef = doc(db, "users", currentUserId);
+        await updateDoc(userRef, { bio: bio });
+        alert("✅ Account details saved successfully!");
+        closeAccountModal();
+    } catch (e) {
+        console.error("Save error: ", e);
+        alert("❌ Failed to save changes.");
+    }
+};
+
+// 4. Follow & Invite Link Share
 window.shareInviteLink = function() {
     const inviteUrl = `https://spymo.app/invite?ref=${currentUserId}`;
     navigator.clipboard.writeText(inviteUrl);
@@ -157,86 +134,15 @@ window.shareInviteLink = function() {
 };
 
 // 5. 🌟 Creator Badge Application Pop-up Logic
-const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxKZvJ3OWuPdkCfxQk2WhMmUi7lY024ZNeBMnRa65NyE6CTYM1dkAn0N7NVQ4SmeF8J/exec";
+const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzFgihF_1-_tknI04jzKAySeJxD3tbtVOorlreveAPqGVXCyBbaaj7Lsz9p1JFLLcCX/exec";
 
 window.applyCreatorBadge = async function() {
-    const badgeModal = document.getElementById("badgeModal");
-    if (badgeModal) badgeModal.style.display = "flex";
-    
-    // ഫയർബേസിൽ നിന്ന് യൂസറുടെ ഇൻഫോ എടുത്ത് Form-ൽ തനിയെ ഫിൽ ചെയ്യുന്നു
-    try {
-        const userDocRef = doc(db, "users", currentUserId);
-        const userDocSnap = await getDoc(userDocRef);
-        if (userDocSnap.exists()) {
-            const userData = userDocSnap.data();
-            if (document.getElementById("badgeUsername")) document.getElementById("badgeUsername").value = userData.username || "";
-            if (document.getElementById("badgeEmail")) document.getElementById("badgeEmail").value = userData.email || "";
-        }
-    } catch(err) {
-        console.error("Error pre-filling badge form: ", err);
-    }
-
-    checkVerificationStatus(); // status ഓട്ടോമാറ്റിക്കായി ബാക്ക്ഗ്രൗണ്ടിൽ ചെക്ക് ചെയ്യും
+    document.getElementById("badgeModal").style.display = "flex";
+    await checkVerificationStatus();
 };
 
 window.closeBadgeModal = function() {
-    const badgeModal = document.getElementById("badgeModal");
-    if (badgeModal) badgeModal.style.display = "none";
-};
-
-window.submitBadgeApplication = async function(event) {
-    if (event) event.preventDefault();
-
-    const submitBtn = document.getElementById("submitBtn");
-    if (submitBtn) {
-        submitBtn.innerText = "Submitting...";
-        submitBtn.disabled = true;
-    }
-
-    const usernameObj = document.getElementById("badgeUsername");
-    const emailObj = document.getElementById("badgeEmail");
-    const msgObj = document.getElementById("badgeMessage") || document.getElementById("badgeReason");
-
-    const username = usernameObj ? usernameObj.value : "";
-    const email = emailObj ? emailObj.value : "";
-    const reasonText = msgObj ? msgObj.value : "";
-
-    const payload = {
-        userId: currentUserId,
-        username: username,
-        email: email,
-        reason: reasonText,
-        appliedAt: new Date().toLocaleString()
-    };
-
-    try {
-        // 1. ഫയർബേസിലേക്ക് റിക്വസ്റ്റ് ചേർക്കുന്നു
-        await addDoc(collection(db, "verification_requests"), payload);
-
-        // 2. Google Script (Telegram Bot)-ലേക്ക് അയക്കുന്നു
-        if (GOOGLE_SCRIPT_URL) {
-            fetch(GOOGLE_SCRIPT_URL, {
-                method: "POST",
-                mode: "no-cors",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(payload)
-            }).catch(e => console.error("Google Script Fetch Error:", e));
-        }
-
-        alert("🎉 Creator Badge Application Submitted Successfully. We will update you via email within 2–3 business days!");
-        const badgeForm = document.getElementById("badgeForm");
-        if (badgeForm) badgeForm.reset();
-        closeBadgeModal();
-
-    } catch (error) {
-        console.error("Submission Error: ", error);
-        alert("❌ Something went wrong while submitting. Please check your rules!");
-    } finally {
-        if (submitBtn) {
-            submitBtn.innerText = "Submit Application";
-            submitBtn.disabled = false;
-        }
-    }
+    document.getElementById("badgeModal").style.display = "none";
 };
 
 async function checkVerificationStatus() {
@@ -246,45 +152,29 @@ async function checkVerificationStatus() {
     if (!statusTag || !submitBtn) return;
 
     try {
-        // 🔹 1. ലോഗിൻ ചെയ്ത യൂസറുടെ ഐഡി ഉറപ്പാക്കുന്നു
-        const localUserData = localStorage.getItem("infinity_user");
-        if (!localUserData) return;
-        const currentUserId = JSON.parse(localUserData).uid;
-
-        if (!currentUserId) return;
-
-        // 🔹 2. ആദ്യം users കളക്ഷനിൽ ചെക്ക് ചെയ്യുന്നു
         const userDocRef = doc(db, "users", currentUserId);
         const userDocSnap = await getDoc(userDocRef);
 
-        if (userDocSnap.exists()) {
-            const userData = userDocSnap.data();
-            
-            // യൂസർ Verified ആണെങ്കിൽ direct ആയി return ചെയ്യും (പിന്നീട് verification_requests ചെക്ക് ചെയ്യില്ല)
-            if (userData.isVerified === true || userData.isVerified === "true") {
-                statusTag.innerText = "✓ Verified Creator";
-                statusTag.className = "status-badge status-verified";
-                submitBtn.innerText = "Already Verified";
-                submitBtn.disabled = true;
-                return; // 🛑 ഇവിടെ വെച്ച് സ്റ്റോപ്പ് ആകും!
-            }
+        if (userDocSnap.exists() && userDocSnap.data().isVerified === true) {
+            statusTag.innerText = "✓ Verified Creator";
+            statusTag.className = "status-badge status-verified";
+            submitBtn.innerText = "Already Verified";
+            submitBtn.disabled = true;
+            return;
         }
 
-        // 🔹 3. Verified അല്ലെങ്കിൽ മാത്രം verification_requests നോക്കുന്നു
         const q = query(
-            collection(db, "verification_requests"), 
+            collection(db, "badge_requests"), 
             where("userId", "==", currentUserId)
         );
         const querySnapshot = await getDocs(q);
 
         if (!querySnapshot.empty) {
-            // അപ്ലിക്കേഷൻ അയച്ചിട്ടുണ്ട്, അഡ്മിൻ ഇതുവരെ Approve ചെയ്തിട്ടില്ല
             statusTag.innerText = "⏳ Under Review";
             statusTag.className = "status-badge status-pending";
             submitBtn.innerText = "Application Submitted";
             submitBtn.disabled = true;
         } else {
-            // അപ്ലിക്കേഷൻ ഒന്നും അയച്ചിട്ടില്ല
             statusTag.innerText = "Not Verified";
             statusTag.className = "status-badge status-unverified";
             submitBtn.innerText = "Submit Application";
@@ -296,8 +186,108 @@ async function checkVerificationStatus() {
     }
 }
 
+window.submitBadgeApplication = async function(event) {
+    event.preventDefault();
 
-// 6. Report Issue
+    const submitBtn = document.getElementById("submitBtn");
+    submitBtn.innerText = "Submitting...";
+    submitBtn.disabled = true;
+
+    const username = document.getElementById("badgeUsername").value;
+    const email = document.getElementById("badgeEmail").value;
+    const message = document.getElementById("badgeMessage").value;
+
+    const payload = {
+        userId: currentUserId,
+        username: username,
+        email: email,
+        message: message,
+        appliedAt: new Date().toLocaleString()
+    };
+
+    try {
+        await addDoc(collection(db, "badge_requests"), payload);
+
+        if (GOOGLE_SCRIPT_URL) {
+            await fetch(GOOGLE_SCRIPT_URL, {
+                method: "POST",
+                mode: "no-cors",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload)
+            });
+        }
+
+        alert("🎉 Creator Badge Application Submitted Successfully!");
+        document.getElementById("badgeForm").reset();
+        closeBadgeModal();
+
+    } catch (error) {
+        console.error("Submission Error: ", error);
+        alert("❌ Something went wrong. Please try again!");
+    } finally {
+        submitBtn.innerText = "Submit Application";
+        submitBtn.disabled = false;
+    }
+};
+
+// 6. 🎵 Music Passcode & Upload Logic
+window.openMusicPasscodeModal = function() {
+    document.getElementById("musicPasscodeModal").style.display = "flex";
+    document.getElementById("musicPasscode").value = "";
+    document.getElementById("passcodeError").style.display = "none";
+};
+
+window.closeMusicPasscodeModal = function() {
+    document.getElementById("musicPasscodeModal").style.display = "none";
+};
+
+window.closeMusicUploadModal = function() {
+    document.getElementById("musicUploadModal").style.display = "none";
+};
+
+window.verifyMusicPasscode = function() {
+    const inputCode = document.getElementById("musicPasscode").value;
+    if (inputCode === SECRET_PASSCODE) {
+        closeMusicPasscodeModal();
+        document.getElementById("musicUploadModal").style.display = "flex";
+    } else {
+        document.getElementById("passcodeError").style.display = "block";
+    }
+};
+
+window.uploadMusicToFirestore = async function(event) {
+    event.preventDefault();
+    const btn = document.getElementById("mSubmitBtn");
+    btn.innerText = "Uploading...";
+    btn.disabled = true;
+
+    const title = document.getElementById("mTitle").value;
+    const artist = document.getElementById("mArtist").value;
+    const audioUrl = document.getElementById("mAudioUrl").value;
+    const duration = document.getElementById("mDuration").value;
+
+    try {
+        await addDoc(collection(db, "music_library"), {
+            title: title,
+            artist: artist,
+            audioUrl: audioUrl,
+            duration: duration,
+            createdAt: serverTimestamp()
+        });
+
+        alert("🎉 Music successfully added to Spymo Library!");
+        document.getElementById("musicForm").reset();
+        closeMusicUploadModal();
+    } catch (error) {
+        console.error("Error adding document: ", error);
+        alert("Failed to add music: " + error.message);
+    } finally {
+        btn.innerText = "Save Song to Library";
+        btn.disabled = false;
+    }
+};
+
+// 7. Report Issue
 window.reportIssue = async function() {
     const issue = prompt("Describe the bug or problem you are facing:");
     if (issue) {
@@ -310,5 +300,5 @@ window.reportIssue = async function() {
     }
 };
 
-// പേജ് ലോഡ് ആവുമ്പോൾ റൺ ചെയ്യുന്നു
+// Initial Load
 loadUserSettings();
