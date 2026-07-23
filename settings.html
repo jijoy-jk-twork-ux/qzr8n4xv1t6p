@@ -103,6 +103,11 @@
                 <span>🌟 Apply for Creator Badge / Blue Tick</span>
                 <span class="badge-tag">APPLY</span>
             </div>
+            <!-- 🎵 പുതിയ Music Add ഓപ്ഷൻ -->
+    <div class="item highlight" onclick="openMusicPasscodeModal()">
+        <span>🎵 Add New Music (Admin Only)</span>
+        <span class="badge-tag" style="background: #00d2ff; color: #000;">ADD</span>
+    </div>
         </div>
 
         <!-- 8. 🎨 Customization (പുതിയത്) -->
@@ -187,6 +192,54 @@
         </form>
     </div>
 </div>
+        <!-- 🔒 1. Passcode Verification Modal -->
+<div id="musicPasscodeModal" class="modal">
+    <div class="modal-content">
+        <span class="close-btn" onclick="closeMusicPasscodeModal()">&times;</span>
+        <h3>🔒 Admin Verification</h3>
+        <p class="modal-sub">Enter secret code to access Music Upload</p>
+        
+        <div class="input-group">
+            <label>Secret Passcode</label>
+            <input type="password" id="musicPasscode" placeholder="Enter PIN">
+        </div>
+        <p id="passcodeError" style="color: #ff4d4d; font-size: 12px; display: none;">Invalid Passcode!</p>
+        <button onclick="verifyMusicPasscode()" class="submit-btn">Verify Code</button>
+    </div>
+</div>
+
+<!-- 🎵 2. Music Upload Modal -->
+<div id="musicUploadModal" class="modal">
+    <div class="modal-content">
+        <span class="close-btn" onclick="closeMusicUploadModal()">&times;</span>
+        <h3>🎵 Upload Music to Vault</h3>
+        <p class="modal-sub">Add songs directly to Firestore music_library</p>
+        
+        <form id="musicForm" onsubmit="uploadMusicToFirestore(event)">
+            <div class="input-group">
+                <label>Song Title</label>
+                <input type="text" id="mTitle" placeholder="e.g. Neon Dreams" required>
+            </div>
+            
+            <div class="input-group">
+                <label>Artist Name</label>
+                <input type="text" id="mArtist" placeholder="e.g. Spymo Music" required>
+            </div>
+
+            <div class="input-group">
+                <label>Cloudinary MP3 Audio URL</label>
+                <input type="url" id="mAudioUrl" placeholder="https://res.cloudinary.com/..." required>
+            </div>
+
+            <div class="input-group">
+                <label>Duration (MM:SS)</label>
+                <input type="text" id="mDuration" placeholder="03:45" required>
+            </div>
+
+            <button type="submit" class="submit-btn" id="mSubmitBtn">Save Song to Library</button>
+        </form>
+    </div>
+                                    </div>
 
 
     <script type="module" src="settings.js"></script>
