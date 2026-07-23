@@ -175,12 +175,21 @@ async function savePostToFirebase(mediaUrl, mediaType, caption, publicId) {
         let userId = "anonymous";
         let username = "Anonymous User";
         let profilePic = "";
+        let isVerified = false;
 
         if (localUserData) {
             const user = JSON.parse(localUserData);
             userId = user.uid || "anonymous";
             username = user.username || "Anonymous User";
             profilePic = user.profilePic || user.avatar || "";
+
+            // 🔹 യൂസറുടെ Verified സ്റ്റാറ്റസ് Firestore-ൽ നിന്ന് നേരിട്ട് പരിശോധിക്കുന്നു
+            if (userId !== "anonymous") {
+                const userDocSnap = await getDoc(doc(db, "users", userId));
+                if (userDocSnap.exists()) {
+                    isVerified = userDocSnap.data().isVerified === true;
+                }
+            }
         }
 
         const fallbackAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(username)}&background=ff1e42&color=fff&size=128`;
@@ -195,7 +204,8 @@ async function savePostToFirebase(mediaUrl, mediaType, caption, publicId) {
             likeCount: 0,
             userId: userId,
             username: username,
-            profilePic: profilePic || fallbackAvatar
+            profilePic: profilePic || fallbackAvatar,
+            isVerified: isVerified // 🔹 verified സ്റ്റാറ്റസ് ഫയർബേസിലേക്ക് നൽകുന്നു
         });
     } catch (error) {
         console.error("Firebase saving error:", error);
@@ -204,7 +214,7 @@ async function savePostToFirebase(mediaUrl, mediaType, caption, publicId) {
 }
 
 // ==========================================
-// 6. FETCH & DISPLAY POSTS
+// 6. FETCH & DISPLAY POSTS (WITH BLUE TICK)
 // ==========================================
 async function fetchAndDisplayPosts() {
     const feedContainer = document.querySelector('.feed-container');
@@ -227,9 +237,22 @@ async function fetchAndDisplayPosts() {
             currentUserId = JSON.parse(localUserData).uid;
         }
 
-        querySnapshot.forEach((documentSnapshot) => {
+        for (const documentSnapshot of querySnapshot.docs) {
             const postData = documentSnapshot.data();
             const postId = documentSnapshot.id;
+
+            // 🔹 Verified Check: പോസ്റ്റിൽ ഇല്ലെങ്കിൽ യൂസർ ഡോക്യുമെന്റിൽ നിന്നും ചെക്ക് ചെയ്യും
+            let isVerified = postData.isVerified === true;
+            if (!isVerified && postData.userId && postData.userId !== "anonymous") {
+                try {
+                    const uSnap = await getDoc(doc(db, "users", postData.userId));
+                    if (uSnap.exists()) {
+                        isVerified = uSnap.data().isVerified === true;
+                    }
+                } catch(e) { console.error(e); }
+            }
+
+            const blueTickHtml = isVerified ? `<span class="verified-badge"><i class="fa-solid fa-check"></i></span>` : '';
 
             let mediaHtml = "";
             if (postData.type === 'image') {
@@ -249,34 +272,45 @@ async function fetchAndDisplayPosts() {
             const postElement = document.createElement('article');
             postElement.classList.add('post');
             postElement.innerHTML = `
-    <div class="post-header" style="display: flex; align-items: center; justify-content: space-between; padding: 10px;">
-        <!-- പ്രൊഫൈൽ ചിത്രവും യൂസർനെയിമും ഒന്നിച്ചു നിർത്താൻ ഒരു Wrapper -->
-        <div style="display: flex; align-items: center; gap: 10px;">
-            <img src="${userPic}" alt="Profile" class="profile-pic" style="width: 38px; height: 38px; border-radius: 50%; object-fit: cover;" onerror="this.src='${fallbackAvatar}'">
-            <span class="username" style="font-weight: bold; cursor: pointer;" onclick="window.location.href='profile.html?id=${postData.userId}'">@${postData.username || 'anonymous'}</span>
-        </div>
-        
-        <!-- Delete Icon ഇവിടെ വലത് വശത്ത് കൃത്യമായി നിൽക്കും -->
-        ${deleteIconHtml}
-    </div>
-    <div class="post-media">
-        ${mediaHtml}
-    </div>
-    <div class="post-actions" style="display: flex; gap: 15px; align-items: center; padding: 10px 0 5px 0;">
-        <i class="fa-regular fa-heart like-icon" style="cursor: pointer; font-size: 1.4rem;"></i>
-        <i class="fa-regular fa-comment comment-icon" style="cursor: pointer; font-size: 1.4rem;" onclick="openCommentSheet('${postId}')"></i>
-    </div>
-    <div class="post-details">
-        <span class="likes-count" style="font-weight: bold; display: block; margin-bottom: 2px; font-size: 0.9rem; color: #fff;">0 likes</span>
-        <p><strong>@${postData.username || 'anonymous'}</strong> ${postData.caption || ""}</p>
-    </div>
-`;
+                <div class="post-header" style="display: flex; align-items: center; justify-content: space-between; width: 100%; padding: 10px 12px; box-sizing: border-box;">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <img src="${userPic}" alt="Profile" class="profile-pic" style="width: 38px; height: 38px; border-radius: 50%; object-fit: cover;" onerror="this.src='${fallbackAvatar}'">
+                        <div class="user-name-wrapper" style="display: flex; align-items: center; gap: 4px;">
+                            <span class="username" style="font-weight: bold; cursor: pointer;" onclick="window.location.href='profile.html?id=${postData.userId}'">@${postData.username || 'anonymous'}</span>
+                            ${blueTickHtml}
+                        </div>
+                    </div>
+                    
+                    ${deleteIconHtml ? `<div style="display: flex; align-items: center;">${deleteIconHtml}</div>` : ''}
+                </div>
+
+                <div class="post-media">
+                    ${mediaHtml}
+                </div>
+
+                <div class="post-actions" style="display: flex; gap: 15px; align-items: center; padding: 10px 12px 5px 12px;">
+                    <i class="fa-regular fa-heart like-icon" style="cursor: pointer; font-size: 1.4rem;"></i>
+                    <i class="fa-regular fa-comment comment-icon" style="cursor: pointer; font-size: 1.4rem;" onclick="openCommentSheet('${postId}')"></i>
+                </div>
+
+                <div class="post-details" style="padding: 0 12px 10px 12px;">
+                    <span class="likes-count" style="font-weight: bold; display: block; margin-bottom: 2px; font-size: 0.9rem; color: #fff;">0 likes</span>
+                    <p style="margin: 0;">
+                       <span class="user-name-wrapper" style="display:inline-flex; align-items: center; gap: 4px;">
+                          <strong>@${postData.username || 'anonymous'}</strong>
+                          ${blueTickHtml}
+                       </span> 
+                       ${postData.caption || ""}
+                    </p>
+                </div>
+            `;
+
 
             feedContainer.appendChild(postElement);
 
             // ലൈക്ക് ഫങ്ഷൻ കണക്ട് ചെയ്യുന്നു
             setupLikeButton(postElement, postId, postData);
-        });
+        }
 
         // ഡിലീറ്റ് ഇവന്റ് ലിസണർ ബൈൻഡ് ചെയ്യുന്നു
         document.querySelectorAll('.delete-icon').forEach(button => {
@@ -344,8 +378,10 @@ async function setupLikeButton(postElement, postId, postData) {
                 if (userDocSnap.exists()) {
                     const userData = userDocSnap.data();
                     const username = userData.username || "User";
+                    const isVerified = userData.isVerified === true;
+                    const blueTick = isVerified ? ` <span class="verified-badge" style="font-size:7px; width:12px; height:12px;"><i class="fa-solid fa-check"></i></span>` : '';
                     const othersCount = likedUsersList.length - 1;
-                    likedByText.innerText = `Liked by @${username} ${othersCount > 0 ? `and ${othersCount} others` : ''}`;
+                    likedByText.innerHTML = `Liked by @${username}${blueTick} ${othersCount > 0 ? `and ${othersCount} others` : ''}`;
                 } else {
                     likedByText.innerText = `Liked by ${likedUsersList.length} people`;
                 }
@@ -436,6 +472,7 @@ window.handleRegisterUser = async (email, password, username) => {
             username: formattedUsername,
             email: email,
             profilePic: defaultProfilePic,
+            isVerified: false, // Default verified false ആയിരിക്കും
             createdAt: new Date().toISOString()
         });
 
@@ -584,7 +621,7 @@ async function fetchAnnouncements() {
 }
 
 // ==========================================
-// 13. COMMENT LOGIC
+// 13. COMMENT LOGIC (WITH BLUE TICK)
 // ==========================================
 window.openCommentSheet = function(postId) {
     const sheet = document.getElementById('comment-sheet');
@@ -622,10 +659,20 @@ window.loadCommentsForPost = async function(postId) {
             return;
         }
 
-        querySnapshot.forEach((docSnap) => {
+        for (const docSnap of querySnapshot.docs) {
             const commentData = docSnap.data();
             const fallbackAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(commentData.username || 'User')}&background=ff1e42&color=fff&size=128`;
             const cPic = commentData.profilePic || fallbackAvatar;
+
+            let isVerified = commentData.isVerified === true;
+            if (!isVerified && commentData.userId) {
+                try {
+                    const uSnap = await getDoc(doc(db, "users", commentData.userId));
+                    if (uSnap.exists()) isVerified = uSnap.data().isVerified === true;
+                } catch(e){}
+            }
+
+            const blueTickHtml = isVerified ? `<span class="verified-badge"><i class="fa-solid fa-check"></i></span>` : '';
 
             const commentItem = document.createElement('div');
             commentItem.className = 'comment-item';
@@ -633,12 +680,15 @@ window.loadCommentsForPost = async function(postId) {
             commentItem.innerHTML = `
                 <img src="${cPic}" class="comment-user-pic" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover;" onerror="this.src='${fallbackAvatar}'">
                 <div class="comment-details">
-                    <strong style="font-size: 0.85rem; color: #fff;">@${commentData.username || 'anonymous'}</strong>
+                    <div class="user-name-wrapper">
+                        <strong style="font-size: 0.85rem; color: #fff;">@${commentData.username || 'anonymous'}</strong>
+                        ${blueTickHtml}
+                    </div>
                     <p style="font-size: 0.85rem; color: #ddd; margin-top: 2px;">${commentData.text}</p>
                 </div>
             `;
             container.appendChild(commentItem);
-        });
+        }
         
         container.scrollTop = container.scrollHeight;
 
@@ -679,11 +729,13 @@ document.addEventListener("DOMContentLoaded", () => {
                 const localUserData = localStorage.getItem("infinity_user");
                 let username = "Anonymous";
                 let profilePic = "";
+                let userId = "";
 
                 if (localUserData) {
                     const user = JSON.parse(localUserData);
                     username = user.username || "Anonymous";
                     profilePic = user.profilePic || user.avatar || "";
+                    userId = user.uid || "";
                 }
 
                 const fallbackAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(username)}&background=ff1e42&color=fff&size=128`;
@@ -691,6 +743,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 await addDoc(collection(db, "posts", postId, "comments"), {
                     text: text,
                     username: username,
+                    userId: userId,
                     profilePic: profilePic || fallbackAvatar,
                     createdAt: new Date()
                 });
