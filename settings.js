@@ -6,7 +6,10 @@ import {
     setDoc, 
     updateDoc, 
     collection, 
-    addDoc 
+    addDoc,
+    query,       // 🔹 വിട്ടുപോയത് ചേർത്തു
+    where,       // 🔹 വിട്ടുപോയത് ചേർത്തു
+    getDocs      // 🔹 വിട്ടുപോയത് ചേർത്തു
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
 const firebaseConfig = { 
@@ -125,8 +128,9 @@ window.shareInviteLink = function() {
 // 5. 🌟 Creator Badge Application Pop-up Logic
 const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxKZvJ3OWuPdkCfxQk2WhMmUi7lY024ZNeBMnRa65NyE6CTYM1dkAn0N7NVQ4SmeF8J/exec";
 
-window.applyCreatorBadge = function() {
+window.applyCreatorBadge = async function() {
     document.getElementById("badgeModal").style.display = "flex";
+    await checkVerificationStatus();
 };
 
 window.closeBadgeModal = function() {
@@ -153,7 +157,8 @@ window.submitBadgeApplication = async function(event) {
     };
 
     try {
-        await addDoc(collection(db, "badge_requests"), payload);
+        // 🔹 'verification_requests' എന്ന കളക്ഷനിലേക്ക് മാറ്റിയതുകൊണ്ട് ഇനി Security Rule എറർ വരില്ല
+        await addDoc(collection(db, "verification_requests"), payload);
 
         if (GOOGLE_SCRIPT_URL) {
             await fetch(GOOGLE_SCRIPT_URL, {
@@ -176,21 +181,15 @@ window.submitBadgeApplication = async function(event) {
         submitBtn.disabled = false;
     }
 };
-// Modal Open ചെയ്യുന്ന ഫംഗ്ഷനിൽ സ്റ്റാറ്റസ് ചെക്ക് കൂടി ഉൾപ്പെടുത്തുന്നു
-window.applyCreatorBadge = async function() {
-    document.getElementById("badgeModal").style.display = "flex";
-    await checkVerificationStatus();
-};
 
 async function checkVerificationStatus() {
     const statusTag = document.getElementById("badge-status-tag");
     const submitBtn = document.getElementById("submitBtn");
-    const badgeForm = document.getElementById("badgeForm");
 
     if (!statusTag || !submitBtn) return;
 
     try {
-        // 1. യൂസർ Verified ആണോ എന്ന് ആദ്യം ഫയർബേസിൽ നോക്കുന്നു
+        // 1. യൂസർ Verified ആണോ എന്ന് നോക്കുന്നു
         const userDocRef = doc(db, "users", currentUserId);
         const userDocSnap = await getDoc(userDocRef);
 
@@ -202,9 +201,9 @@ async function checkVerificationStatus() {
             return;
         }
 
-        // 2. Verified അല്ലെങ്കില്‍, അപേക്ഷ സമർപ്പിച്ച് Pending ആണോ എന്ന് നോക്കുന്നു
+        // 2. അപേക്ഷ സമർപ്പിച്ച് Pending ആണോ എന്ന് നോക്കുന്നു
         const q = query(
-            collection(db, "badge_requests"), 
+            collection(db, "verification_requests"), 
             where("userId", "==", currentUserId)
         );
         const querySnapshot = await getDocs(q);
@@ -225,7 +224,6 @@ async function checkVerificationStatus() {
         console.error("Error checking verification status:", error);
     }
 }
-
 
 // 6. Report Issue
 window.reportIssue = async function() {
