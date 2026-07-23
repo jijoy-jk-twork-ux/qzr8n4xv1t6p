@@ -252,7 +252,12 @@ async function fetchAndDisplayPosts() {
                 } catch(e) { console.error(e); }
             }
 
-            const blueTickHtml = isVerified ? `<span class="verified-badge"><i class="fa-solid fa-check"></i></span>` : '';
+            const blueTickHtml = isVerified ? `
+    <span class="verified-badge">
+        <svg width="7" height="7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="20 6 9 17 4 12"></polyline>
+        </svg>
+    </span>` : '';
 
             let mediaHtml = "";
             if (postData.type === 'image') {
