@@ -513,9 +513,10 @@ body {
     animation: blink 1s infinite;
     color: #ff3e3e; /* ബ്ലിങ്ക് ചെയ്യുമ്പോൾ ഒരു നിറം വരാൻ */
 }
-/* 🔵 Blue Tick Verified Badge Styling */
-.user-name-wrapper {
-    display: flex;
+
+/* 🔵 Blue Tick Verified Badge Styling (Updated Size & Alignment) */
+.user-name-wrapper, .user-display-wrapper {
+    display: inline-flex;
     align-items: center;
     gap: 4px; /* യൂസർനേമും ബ്ലൂ ടിക്കും തമ്മിലുള്ള ഗ്യാപ്പ് */
 }
@@ -526,10 +527,10 @@ body {
     justify-content: center;
     background-color: #0095f6; /* Instagram Blue */
     color: #ffffff;
-    width: 15px;
-    height: 15px;
+    width: 13px;  /* 🔹 വലിപ്പം 13px ആക്കി പാകത്തിന് കുറച്ചു */
+    height: 13px;
     
-    /* 🔹 ഇൻസ്റ്റാഗ്രാം മോഡൽ 12-പയിന്റ് സ്റ്റാർ ഡിസൈൻ */
+    /* 🔹 ഇൻസ്റ്റാഗ്രാം മോഡൽ 12-പോയിന്റ് സ്റ്റാർ ഡിസൈൻ */
     clip-path: polygon(
         100% 50%, 93.3% 62.94%, 93.3% 77.45%, 80.86% 84.86%, 
         70.71% 95.71%, 56.46% 93.3%, 43.54% 93.3%, 29.29% 95.71%, 
@@ -540,6 +541,15 @@ body {
     );
     
     flex-shrink: 0;
+    vertical-align: middle;
+}
+
+/* 🔹 ബാഡ്ജിനുള്ളിലെ വെളുത്ത ടിക്ക് മാർക്കിന്റെ വലിപ്പം പെർഫെക്റ്റ് ആക്കാൻ */
+.verified-badge svg {
+    width: 7px;
+    height: 7px;
+    stroke-width: 4;
+    display: block;
 }
 
 /* Delete Icon Styling */
