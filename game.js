@@ -3,6 +3,7 @@ import {
     getFirestore, 
     collection, 
     query, 
+    where,
     orderBy, 
     limit, 
     onSnapshot, 
@@ -27,12 +28,11 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-// Open License Sound Effects
 const winSound = new Audio("https://assets.mixkit.co/active_storage/sfx/1435/1435-preview.mp3");
 const loseSound = new Audio("https://assets.mixkit.co/active_storage/sfx/253/253-preview.mp3");
 const clickSound = new Audio("https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3");
 
-// 🔹 1. ലോഗിൻ ചെയ്ത യഥാർത്ഥ യൂസറുടെ UID എടുക്കുന്നു (Fix for USER_xxxx)
+// 🔹 Auth Check
 let currentUserId = null;
 const localUserData = localStorage.getItem("infinity_user") || localStorage.getItem("user");
 if (localUserData) {
@@ -43,7 +43,6 @@ if (localUserData) {
         currentUserId = localStorage.getItem("userUid");
     }
 }
-
 if (!currentUserId) {
     currentUserId = localStorage.getItem("userUid");
 }
@@ -54,44 +53,83 @@ let isMyTurn = false;
 let boardState = ["", "", "", "", "", "", "", "", ""];
 let lastEmojiTimestamp = 0;
 let roomUnsubscribe = null;
+let matchTimer = null;
+let myUsername = "Player";
 
-// 🔹 2. TOP PLAYER REALTIME UPDATE (Name Fix)
+// Get current player username
+async function fetchMyUsername() {
+    if (!currentUserId) return;
+    try {
+        const snap = await getDoc(doc(db, "users", currentUserId));
+        if (snap.exists()) {
+            const data = snap.data();
+            myUsername = data.username || data.name || data.displayName || "Player";
+        }
+    } catch (e) { console.error(e); }
+}
+fetchMyUsername();
+
+// 🔹 1. LEADERBOARD (At least 6 wins required)
 function loadTopPlayer() {
-    const q = query(collection(db, "users"), orderBy("wins", "desc"), limit(1));
+    const q = query(
+        collection(db, "users"), 
+        where("wins", ">=", 6),
+        orderBy("wins", "desc"), 
+        limit(1)
+    );
+    
     onSnapshot(q, (snapshot) => {
         const banner = document.getElementById("top-player-banner");
         if (banner) {
             if (!snapshot.empty) {
                 const topUser = snapshot.docs[0].data();
-                // username അല്ലെങ്കിൽ name അല്ലെങ്കിൽ displayName ഫയർബേസിൽ നിന്ന് എടുക്കുന്നു
-                const displayName = topUser.username || topUser.name || topUser.displayName || "Anonymous Player";
-                const winsCount = topUser.wins || 0;
-                
-                banner.innerHTML = `👑 Top Player: <b>${displayName}</b> (${winsCount} Wins)`;
+                const displayName = topUser.username || topUser.name || topUser.displayName || "Top Player";
+                banner.innerHTML = `👑 Top Leader: <b>${displayName}</b> (${topUser.wins || 0} Wins)`;
             } else {
-                banner.innerHTML = "👑 Top Player: No Leaders Yet";
+                banner.innerHTML = "👑 Top Leader: Minimum 6 Wins Needed!";
             }
         }
+    }, (error) => {
+        console.error("Leaderboard query error: ", error);
     });
 }
 loadTopPlayer();
 
-// 🔹 3. AUTOMATIC MATCHMAKING
+// 🔹 2. MATCHMAKING + 10s TIMER
 async function startMatchmaking() {
     if (!currentUserId) {
         alert("Please login first!");
         return;
     }
 
-    document.getElementById("board").style.display = "none";
-    document.getElementById("emoji-bar").style.display = "none";
-    document.getElementById("status").innerText = "Searching for opponent...";
-    document.getElementById("find-btn").style.display = "none";
+    // Clean old room from DB when finding new match
+    if (roomId) {
+        try { await deleteDoc(doc(db, "game_rooms", roomId)); } catch(e){}
+    }
+
+    resetUI();
+    document.getElementById("status").innerText = "Searching for opponent... (10s)";
+    
+    // 10s Countdown logic
+    let timeLeft = 10;
+    if (matchTimer) clearInterval(matchTimer);
+    
+    matchTimer = setInterval(() => {
+        timeLeft--;
+        const statusEl = document.getElementById("status");
+        if (statusEl && statusEl.innerText.includes("Searching")) {
+            statusEl.innerText = `Searching for opponent... (${timeLeft}s)`;
+        }
+        if (timeLeft <= 0) {
+            clearInterval(matchTimer);
+            alert("No opponent found! Redirecting to Game Page.");
+            window.location.href = "game.html"; // Default redirect
+        }
+    }, 1000);
 
     boardState = ["", "", "", "", "", "", "", "", ""];
     mySymbol = "";
     isMyTurn = false;
-    updateUI();
 
     const waitingQueueRef = doc(db, "matchmaking", "queue");
 
@@ -104,15 +142,19 @@ async function startMatchmaking() {
 
                 if (waitingData.waitingPlayer !== currentUserId) {
                     roomId = waitingData.roomId;
+                    
+                    // Random First Turn Selection
+                    const firstTurn = Math.random() < 0.5 ? "X" : "O";
                     mySymbol = "O";
-                    isMyTurn = false;
+                    isMyTurn = (firstTurn === "O");
 
                     const roomRef = doc(db, "game_rooms", roomId);
 
                     transaction.delete(waitingQueueRef);
                     transaction.update(roomRef, {
                         player2: currentUserId,
-                        status: "playing"
+                        status: "playing",
+                        turn: firstTurn
                     });
 
                     return;
@@ -121,7 +163,7 @@ async function startMatchmaking() {
 
             roomId = "room_" + Math.floor(Math.random() * 100000);
             mySymbol = "X";
-            isMyTurn = true;
+            isMyTurn = false; 
 
             const roomRef = doc(db, "game_rooms", roomId);
 
@@ -130,7 +172,8 @@ async function startMatchmaking() {
                 player2: null,
                 board: ["", "", "", "", "", "", "", "", ""],
                 turn: "X",
-                status: "waiting"
+                status: "waiting",
+                chats: []
             });
 
             transaction.set(waitingQueueRef, {
@@ -139,25 +182,17 @@ async function startMatchmaking() {
             });
         });
 
-        if (mySymbol === "X") {
-            document.getElementById("status").innerText = "Waiting for an opponent...";
-        }
-        
         setupRoom(roomId);
 
     } catch (error) {
         console.error("Matchmaking Error: ", error);
         document.getElementById("status").innerText = "Connection Error! Retrying...";
-        setTimeout(startMatchmaking, 3000);
     }
 }
 
-const findBtn = document.getElementById("find-btn");
-if (findBtn) {
-    findBtn.addEventListener("click", startMatchmaking);
-}
+document.getElementById("find-btn").addEventListener("click", startMatchmaking);
 
-// 🔹 4. GAME ROOM & OPPONENT USERNAME FETCH (Fix for Opponent Name)
+// 🔹 3. SETUP GAME ROOM & LISTENERS
 function setupRoom(rId) {
     if (roomUnsubscribe) roomUnsubscribe();
 
@@ -168,8 +203,11 @@ function setupRoom(rId) {
             const data = snapshot.data();
 
             if (data.status === "playing") {
+                if (matchTimer) clearInterval(matchTimer); // Stop countdown
+
                 document.getElementById("board").style.display = "grid";
                 document.getElementById("emoji-bar").style.display = "flex";
+                document.getElementById("chat-container").style.display = "block";
 
                 const opponentId = (data.player1 === currentUserId) ? data.player2 : data.player1;
                 let opponentName = "Opponent";
@@ -192,6 +230,9 @@ function setupRoom(rId) {
                     isMyTurn = true;
                     document.getElementById("status").innerText = `Your Turn (${mySymbol}) vs ${opponentName}!`;
                 }
+
+                // Render Chats
+                renderChats(data.chats || []);
             }
 
             if (data.lastEmoji && data.emojiTime > lastEmojiTimestamp) {
@@ -202,19 +243,7 @@ function setupRoom(rId) {
     });
 }
 
-// 🔹 5. UI UPDATE
-function updateUI() {
-    const cells = document.querySelectorAll(".cell");
-    cells.forEach((cell, index) => {
-        cell.innerText = boardState[index];
-        if (boardState[index] !== "") {
-            cell.classList.add("disabled");
-        } else {
-            cell.classList.remove("disabled");
-        }
-    });
-}
-
+// 🔹 4. BOARD CLICK & MOVES
 document.querySelectorAll(".cell").forEach(cell => {
     cell.addEventListener("click", async (e) => {
         const index = e.target.getAttribute("data-index");
@@ -235,53 +264,47 @@ document.querySelectorAll(".cell").forEach(cell => {
     });
 });
 
-// 🔹 6. EMOJI SENDING
-window.sendEmoji = async function(emoji) {
-    if (!roomId) return;
-    
-    const roomRef = doc(db, "game_rooms", roomId);
-    await setDoc(roomRef, {
-        lastEmoji: emoji,
-        emojiTime: Date.now()
-    }, { merge: true });
-};
-
-function showFloatingEmoji(emoji) {
-    const el = document.createElement("div");
-    el.className = "floating-emoji";
-    el.innerText = emoji;
-    
-    const randomX = Math.floor(Math.random() * (window.innerWidth - 60));
-    el.style.left = `${randomX}px`;
-
-    document.body.appendChild(el);
-
-    setTimeout(() => {
-        el.remove();
-    }, 2000);
+function updateUI() {
+    const cells = document.querySelectorAll(".cell");
+    cells.forEach((cell, index) => {
+        cell.innerText = boardState[index];
+        if (boardState[index] !== "") {
+            cell.classList.add("disabled");
+        } else {
+            cell.classList.remove("disabled");
+        }
+    });
 }
 
-// 🔹 7. WINNER CHECK & SCORE UPDATE
+// 🔹 5. WINNING LINE & WIN CHECK LOGIC
 async function checkWinner() {
     const winPatterns = [
-        [0, 1, 2], [3, 4, 5], [6, 7, 8],
-        [0, 3, 6], [1, 4, 7], [2, 5, 8],
-        [0, 4, 8], [2, 4, 6]
+        { pattern: [0, 1, 2], type: "h", index: 0 },
+        { pattern: [3, 4, 5], type: "h", index: 1 },
+        { pattern: [6, 7, 8], type: "h", index: 2 },
+        { pattern: [0, 3, 6], type: "v", index: 0 },
+        { pattern: [1, 4, 7], type: "v", index: 1 },
+        { pattern: [2, 5, 8], type: "v", index: 2 },
+        { pattern: [0, 4, 8], type: "d", index: 0 },
+        { pattern: [2, 4, 6], type: "d", index: 1 }
     ];
 
     let hasWinner = false;
 
-    for (let pattern of winPatterns) {
-        const [a, b, c] = pattern;
+    for (let item of winPatterns) {
+        const [a, b, c] = item.pattern;
         if (boardState[a] && boardState[a] === boardState[b] && boardState[a] === boardState[c]) {
             hasWinner = true;
+            drawWinningLine(item.type, item.index);
+
             if (boardState[a] === mySymbol) {
                 winSound.play();
-                showResultBanner("🎉 YOU WON! Finding next opponent in 4s...", "green");
-                await updateUserWins();
+                showResultBanner("🎉 YOU WON! Finding next opponent in 4s...", "#00ff66");
+                await updateUserStats(true);
             } else {
                 loseSound.play();
-                showResultBanner("❌ YOU LOST! Finding next opponent in 4s...", "red");
+                showResultBanner("❌ YOU LOST! Finding next opponent in 4s...", "#ff5252");
+                await updateUserStats(false);
             }
 
             setTimeout(() => {
@@ -301,20 +324,117 @@ async function checkWinner() {
     }
 }
 
+function drawWinningLine(type, index) {
+    const line = document.getElementById("winning-line");
+    line.style.display = "block";
+
+    if (type === "h") {
+        line.style.width = "260px";
+        line.style.height = "6px";
+        line.style.left = "5px";
+        line.style.top = `${40 + index * 93}px`;
+        line.style.transform = "none";
+    } else if (type === "v") {
+        line.style.width = "6px";
+        line.style.height = "260px";
+        line.style.top = "5px";
+        line.style.left = `${40 + index * 93}px`;
+        line.style.transform = "none";
+    } else if (type === "d") {
+        line.style.width = "350px";
+        line.style.height = "6px";
+        line.style.top = "130px";
+        line.style.left = "-40px";
+        line.style.transform = index === 0 ? "rotate(45deg)" : "rotate(-45deg)";
+    }
+}
+
 function showResultBanner(msg, color) {
     const statusEl = document.getElementById("status");
     statusEl.innerText = msg;
     statusEl.style.color = color;
 }
 
-async function updateUserWins() {
+// 🔹 6. ACCURATE WIN & LOSS STATS UPDATE
+async function updateUserStats(isWin) {
     if (!currentUserId) return;
     try {
         const userRef = doc(db, "users", currentUserId);
-        await updateDoc(userRef, {
-            wins: increment(1)
-        });
+        if (isWin) {
+            await updateDoc(userRef, { wins: increment(1) });
+        } else {
+            await updateDoc(userRef, { losses: increment(1) });
+        }
     } catch (e) {
-        console.error("Error updating score: ", e);
+        console.error("Error updating stats: ", e);
     }
+}
+
+// 🔹 7. CHAT LOGIC (Auto Delete Old Messages > 5)
+document.getElementById("send-chat-btn").addEventListener("click", sendChatMessage);
+
+async function sendChatMessage() {
+    const input = document.getElementById("chat-input");
+    const text = input.value.trim();
+    if (!text || !roomId) return;
+
+    input.value = "";
+    const roomRef = doc(db, "game_rooms", roomId);
+
+    try {
+        const roomSnap = await getDoc(roomRef);
+        if (roomSnap.exists()) {
+            let chats = roomSnap.data().chats || [];
+            chats.push({ sender: myUsername, text: text });
+
+            // 5 കവിഞ്ഞാൽ ആദ്യത്തെ സന്ദേശം താനേ ഡിലീറ്റ് ആകും (Maximum 5 items maintained)
+            if (chats.length > 5) {
+                chats.shift();
+            }
+
+            await updateDoc(roomRef, { chats: chats });
+        }
+    } catch (e) {
+        console.error("Chat error:", e);
+    }
+}
+
+function renderChats(chats) {
+    const chatBox = document.getElementById("chat-box");
+    chatBox.innerHTML = "";
+    chats.forEach(c => {
+        const div = document.createElement("div");
+        div.className = "chat-msg";
+        div.innerHTML = `<b>${c.sender}:</b> ${c.text}`;
+        chatBox.appendChild(div);
+    });
+    chatBox.scrollTop = chatBox.scrollHeight;
+}
+
+// 🔹 8. LIVE EMOJI SUPPORT
+window.sendEmoji = async function(emoji) {
+    if (!roomId) return;
+    const roomRef = doc(db, "game_rooms", roomId);
+    await setDoc(roomRef, {
+        lastEmoji: emoji,
+        emojiTime: Date.now()
+    }, { merge: true });
+};
+
+function showFloatingEmoji(emoji) {
+    const el = document.createElement("div");
+    el.className = "floating-emoji";
+    el.innerText = emoji;
+    const randomX = Math.floor(Math.random() * (window.innerWidth - 60));
+    el.style.left = `${randomX}px`;
+    document.body.appendChild(el);
+    setTimeout(() => { el.remove(); }, 2000);
+}
+
+function resetUI() {
+    document.getElementById("board").style.display = "none";
+    document.getElementById("emoji-bar").style.display = "none";
+    document.getElementById("chat-container").style.display = "none";
+    document.getElementById("winning-line").style.display = "none";
+    document.getElementById("find-btn").style.display = "inline-block";
 }
