@@ -271,6 +271,25 @@
         .save-btn:hover {
             opacity: 0.9;
         }
+        /* 🔵 Verified Blue Tick Badge Styling */
+.user-display-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.verified-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #0095f6; /* Instagram Blue */
+    color: #ffffff;
+    font-size: 10px;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+}
+
     </style>
 </head>
 <body>
@@ -288,10 +307,19 @@
                 <input type="file" id="profile-pic-input" accept="image/*" style="display: none;">
             </div>
 
-            <div class="profile-info">
-                <h2 id="user-display-name">Loading...</h2>
-                <p id="user-handle" class="username-handle">@username</p>
-                <p id="user-bio" class="bio-text">Exploring the digital space! 🚀</p>
+<div class="profile-info">
+    <!-- 🔵 Blue Tick Badge ചേർക്കാൻ അനുയോജ്യമായ wrapper -->
+    <div class="user-display-wrapper">
+        <h2 id="user-display-name">Loading...</h2>
+        <!-- ഫയർബേസിൽ Verified ആണെങ്കിൽ ഈ ബ്ലൂ ടിക്ക് ഓട്ടോമാറ്റിക്കായി കാണിക്കും -->
+        <span id="profile-blue-tick" class="verified-badge" style="display: none;">
+            <i class="fa-solid fa-check"></i>
+        </span>
+    </div>
+    
+    <p id="user-handle" class="username-handle">@username</p>
+    <p id="user-bio" class="bio-text">Exploring the digital space! 🚀</p>
+
 
                 <!-- Followers & Following Stats -->
                 <div class="stats-container">
