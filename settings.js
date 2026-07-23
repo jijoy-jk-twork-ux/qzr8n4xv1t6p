@@ -155,6 +155,7 @@ async function checkVerificationStatus() {
         const userDocRef = doc(db, "users", currentUserId);
         const userDocSnap = await getDoc(userDocRef);
 
+        // 🟢 1. അക്കൗണ്ട് വെരിഫൈഡ് ആണെങ്കിൽ (Green Badge)
         if (userDocSnap.exists() && userDocSnap.data().isVerified === true) {
             statusTag.innerText = "✓ Verified Creator";
             statusTag.className = "status-badge status-verified";
@@ -163,8 +164,10 @@ async function checkVerificationStatus() {
             return;
         }
 
+        // 🟠 2. അപേക്ഷ സമർപ്പിച്ച് റിവ്യൂവിൽ ആണെങ്കിൽ (Orange Badge)
+        // 💡 ശ്രദ്ധിക്കുക: Firestore-ലെ കളക്ഷൻ പേര് 'verification_requests' എന്ന് തന്നെ ഉറപ്പാക്കുക
         const q = query(
-            collection(db, "badge_requests"), 
+            collection(db, "verification_requests"), 
             where("userId", "==", currentUserId)
         );
         const querySnapshot = await getDocs(q);
@@ -175,8 +178,9 @@ async function checkVerificationStatus() {
             submitBtn.innerText = "Application Submitted";
             submitBtn.disabled = true;
         } else {
-            statusTag.innerText = "Not Verified";
-            statusTag.className = "status-badge status-unverified";
+            // 🔴 3. വെരിഫൈഡ് അല്ല / അപേക്ഷിച്ചിട്ടില്ല (Red Badge)
+            statusTag.innerText = "✖ Not Verified";
+            statusTag.className = "status-badge status-not-verified"; // 'status-not-verified' ആക്കി
             submitBtn.innerText = "Submit Application";
             submitBtn.disabled = false;
         }
