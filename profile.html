@@ -284,11 +284,22 @@
     justify-content: center;
     background-color: #0095f6; /* Instagram Blue */
     color: #ffffff;
-    font-size: 10px;
-    width: 18px;
-    height: 18px;
-    border-radius: 50%;
+    width: 15px;
+    height: 15px;
+    
+    /* 🔹 ഇൻസ്റ്റാഗ്രാം മോഡൽ 12-പയിന്റ് സ്റ്റാർ ഡിസൈൻ */
+    clip-path: polygon(
+        100% 50%, 93.3% 62.94%, 93.3% 77.45%, 80.86% 84.86%, 
+        70.71% 95.71%, 56.46% 93.3%, 43.54% 93.3%, 29.29% 95.71%, 
+        19.14% 84.86%, 6.7% 77.45%, 6.7% 62.94%, 0% 50%, 
+        6.7% 37.06%, 6.7% 22.55%, 19.14% 15.14%, 29.29% 4.29%, 
+        43.54% 6.7%, 56.46% 6.7%, 70.71% 4.29%, 80.86% 15.14%, 
+        93.3% 22.55%, 93.3% 37.06%
+    );
+    
+    flex-shrink: 0;
 }
+
 
     </style>
 </head>
@@ -311,11 +322,16 @@
     <!-- 🔵 Blue Tick Badge ചേർക്കാൻ അനുയോജ്യമായ wrapper -->
     <div class="user-display-wrapper">
         <h2 id="user-display-name">Loading...</h2>
-        <!-- ഫയർബേസിൽ Verified ആണെങ്കിൽ ഈ ബ്ലൂ ടിക്ക് ഓട്ടോമാറ്റിക്കായി കാണിക്കും -->
+        
+        <!-- ഫയർബേസിൽ Verified ആണെങ്കിൽ ഈ ഇൻസ്റ്റാഗ്രാം മോഡൽ ബ്ലൂ ടിക്ക് കാണിക്കും -->
         <span id="profile-blue-tick" class="verified-badge" style="display: none;">
-            <i class="fa-solid fa-check"></i>
+            <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="20 6 9 17 4 12"></polyline>
+            </svg>
         </span>
     </div>
+</div>
+
     
     <p id="user-handle" class="username-handle">@username</p>
     <p id="user-bio" class="bio-text">Exploring the digital space! 🚀</p>
