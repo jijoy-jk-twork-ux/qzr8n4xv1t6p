@@ -144,17 +144,19 @@ window.submitBadgeApplication = async function(event) {
     submitBtn.innerText = "Submitting...";
     submitBtn.disabled = true;
 
-    const username = document.getElementById("badgeUsername").value;
-    const email = document.getElementById("badgeEmail").value;
-    const message = document.getElementById("badgeMessage").value;
+    // HTML-ലെ correct ID കൃത്യമായി കൊടുക്കുക (badgeMessage അല്ലെങ്കിൽ badgeReason)
+const username = document.getElementById("badgeUsername").value;
+const email = document.getElementById("badgeEmail").value;
+const reasonText = document.getElementById("badgeMessage") ? document.getElementById("badgeMessage").value : "";
 
-    const payload = {
-        userId: currentUserId,
-        username: username,
-        email: email,
-        message: message,
-        appliedAt: new Date().toLocaleString()
-    };
+const payload = {
+    userId: currentUserId,
+    username: username,
+    email: email,
+    reason: reasonText, // 🔹 'message' എന്നതിന് പകരം 'reason' എന്ന് നൽകുക
+    appliedAt: new Date().toLocaleString()
+};
+
 
     try {
         // 🔹 'verification_requests' എന്ന കളക്ഷനിലേക്ക് മാറ്റിയതുകൊണ്ട് ഇനി Security Rule എറർ വരില്ല
@@ -189,19 +191,24 @@ async function checkVerificationStatus() {
     if (!statusTag || !submitBtn) return;
 
     try {
-        // 1. യൂസർ Verified ആണോ എന്ന് നോക്കുന്നു
+        // 1. യൂസർ Verified ആണോ എന്ന് ഫയർബേസിലെ 'users' കളക്ഷനിൽ നോക്കുന്നു
         const userDocRef = doc(db, "users", currentUserId);
         const userDocSnap = await getDoc(userDocRef);
 
-        if (userDocSnap.exists() && userDocSnap.data().isVerified === true) {
-            statusTag.innerText = "✓ Verified Creator";
-            statusTag.className = "status-badge status-verified";
-            submitBtn.innerText = "Already Verified";
-            submitBtn.disabled = true;
-            return;
+        if (userDocSnap.exists()) {
+            const userData = userDocSnap.data();
+            
+            // 🔹 boolean true ആണോ അതോ string "true" ആണോ എന്ന് രണ്ട് തരത്തിലും ചെക്ക് ചെയ്യുന്നു
+            if (userData.isVerified === true || userData.isVerified === "true") {
+                statusTag.innerText = "✓ Verified Creator";
+                statusTag.className = "status-badge status-verified";
+                submitBtn.innerText = "Already Verified";
+                submitBtn.disabled = true;
+                return; // Verified ആണെങ്കിൽ ഇവിടെ വെച്ച് സ്റ്റോപ്പ് ചെയ്യും
+            }
         }
 
-        // 2. അപേക്ഷ സമർപ്പിച്ച് Pending ആണോ എന്ന് നോക്കുന്നു
+        // 2. Verified അല്ലെങ്കില്‍ മാത്രം അപേക്ഷ സമർപ്പിച്ച് Pending ആണോ എന്ന് നോക്കുന്നു
         const q = query(
             collection(db, "verification_requests"), 
             where("userId", "==", currentUserId)
@@ -224,6 +231,7 @@ async function checkVerificationStatus() {
         console.error("Error checking verification status:", error);
     }
 }
+
 
 // 6. Report Issue
 window.reportIssue = async function() {
