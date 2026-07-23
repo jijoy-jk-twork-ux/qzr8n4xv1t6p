@@ -513,3 +513,35 @@ body {
     animation: blink 1s infinite;
     color: #ff3e3e; /* ബ്ലിങ്ക് ചെയ്യുമ്പോൾ ഒരു നിറം വരാൻ */
 }
+/* 🔵 Blue Tick Verified Badge Styling */
+.user-name-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 4px; /* യൂസർനേമും ബ്ലൂ ടിക്കും തമ്മിലുള്ള ഗ്യാപ്പ് */
+}
+
+.verified-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #0095f6; /* Instagram Blue Color */
+    color: #ffffff;
+    font-size: 8px;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    margin-left: 2px;
+}
+/* Delete Icon Styling */
+.delete-icon {
+    font-size: 1.1rem;
+    cursor: pointer;
+    color: #ff4d4d;
+    padding: 4px;
+    transition: transform 0.2s;
+}
+
+.delete-icon:hover {
+    transform: scale(1.1);
+}
+
