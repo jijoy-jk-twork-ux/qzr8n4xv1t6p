@@ -30,43 +30,107 @@ if (!currentUserId) {
     localStorage.setItem("userUid", currentUserId);
 }
 
-// 1. ഫയർബേസിൽ നിന്ന് യൂസറുടെ സെറ്റിംഗ്സ് ഡാറ്റ ലോഡ് ചെയ്യുന്നു
+// 1. ഫയർബേസിൽ നിന്ന് യൂസറുടെ സെറ്റിംഗ്സും അക്കൗണ്ട് വിവരങ്ങളും ലോഡ് ചെയ്യുന്നു
 async function loadUserSettings() {
-    const userRef = doc(db, "users", currentUserId);
-    const docSnap = await getDoc(userRef);
+    try {
+        const userRef = doc(db, "users", currentUserId);
+        const docSnap = await getDoc(userRef);
 
-    if (docSnap.exists()) {
-        const data = docSnap.data();
-        
-        // Account Center Banner Update
-        document.getElementById("acc-username").innerText = `@${data.username || currentUserId} • ${data.wins || 0} Wins`;
+        if (docSnap.exists()) {
+            const data = docSnap.data();
+            
+            // Account Center Banner Update (Username, Wins, Name, Email)
+            const displayUser = data.username || currentUserId;
+            document.getElementById("acc-username").innerText = `@${displayUser} • ${data.wins || 0} Wins`;
 
-        // Toggles load
-        if (data.settings) {
-            document.getElementById("setting-mentions").checked = data.settings.allowMentions || false;
-            document.getElementById("setting-muted").checked = data.settings.isMuted || false;
-            document.getElementById("setting-datasaver").checked = data.settings.dataSaver || false;
-            document.getElementById("setting-family").checked = data.settings.familyMode || false;
-            if (data.settings.messages) {
-                document.getElementById("setting-messages").value = data.settings.messages;
+            // Toggles load
+            if (data.settings) {
+                if (document.getElementById("setting-mentions")) document.getElementById("setting-mentions").checked = data.settings.allowMentions || false;
+                if (document.getElementById("setting-muted")) document.getElementById("setting-muted").checked = data.settings.isMuted || false;
+                if (document.getElementById("setting-datasaver")) document.getElementById("setting-datasaver").checked = data.settings.dataSaver || false;
+                if (document.getElementById("setting-family")) document.getElementById("setting-family").checked = data.settings.familyMode || false;
+                if (document.getElementById("setting-messages") && data.settings.messages) {
+                    document.getElementById("setting-messages").value = data.settings.messages;
+                }
             }
+        } else {
+            // പുതിയ യൂസർമാർക്കായി ബോക്സ് ക്രിയേറ്റ് ചെയ്യുന്നു
+            await setDoc(userRef, {
+                username: "User_" + Math.floor(Math.random() * 1000),
+                name: "User Name",
+                email: "user@example.com",
+                wins: 0,
+                bio: "Welcome to my Spymo profile!",
+                isVerified: false,
+                settings: {
+                    allowMentions: true,
+                    isMuted: false,
+                    dataSaver: false,
+                    familyMode: false,
+                    messages: "everyone"
+                }
+            });
+            loadUserSettings();
         }
-    } else {
-        await setDoc(userRef, {
-            username: "User_" + Math.floor(Math.random() * 1000),
-            wins: 0,
-            bio: "",
-            settings: {
-                allowMentions: true,
-                isMuted: false,
-                dataSaver: false,
-                familyMode: false,
-                messages: "everyone"
-            }
-        });
-        loadUserSettings();
+    } catch (e) {
+        console.error("Error loading user settings: ", e);
     }
 }
+
+// 3. 💎 Account Center Pop-up Logic (Username, Name, Email, Bio ശരിയായി കാണിക്കുന്നു)
+window.openAccountCenter = async function() {
+    try {
+        const userRef = doc(db, "users", currentUserId);
+        const docSnap = await getDoc(userRef);
+        
+        if (docSnap.exists()) {
+            const d = docSnap.data();
+            
+            if (document.getElementById("accUserId")) document.getElementById("accUserId").value = currentUserId;
+            if (document.getElementById("accDisplayUsername")) document.getElementById("accDisplayUsername").value = d.username || "";
+            if (document.getElementById("accDisplayName")) document.getElementById("accDisplayName").value = d.name || "";
+            if (document.getElementById("accDisplayEmail")) document.getElementById("accDisplayEmail").value = d.email || "";
+            if (document.getElementById("accBio")) document.getElementById("accBio").value = d.bio || "";
+            if (document.getElementById("accWins")) document.getElementById("accWins").value = d.wins || 0;
+            
+            document.getElementById("accountModal").style.display = "flex";
+        }
+    } catch (e) {
+        console.error("Error opening account modal: ", e);
+    }
+};
+
+window.closeAccountModal = function() {
+    document.getElementById("accountModal").style.display = "none";
+};
+
+// അക്കൗണ്ട് വിവരങ്ങൾ അപ്‌ഡേറ്റ് ചെയ്യുന്നു
+window.saveAccountDetails = async function(event) {
+    event.preventDefault();
+    
+    const newUsername = document.getElementById("accDisplayUsername") ? document.getElementById("accDisplayUsername").value : "";
+    const newName = document.getElementById("accDisplayName") ? document.getElementById("accDisplayName").value : "";
+    const newEmail = document.getElementById("accDisplayEmail") ? document.getElementById("accDisplayEmail").value : "";
+    const newBio = document.getElementById("accBio") ? document.getElementById("accBio").value : "";
+    
+    try {
+        const userRef = doc(db, "users", currentUserId);
+        await updateDoc(userRef, { 
+            username: newUsername,
+            name: newName,
+            email: newEmail,
+            bio: newBio 
+        });
+        
+        alert("✅ Account details saved successfully!");
+        closeAccountModal();
+        loadUserSettings(); // ഡാറ്റ പുതുക്കാൻ ഫംഗ്ഷൻ വീണ്ടും റൺ ചെയ്യുന്നു
+    } catch (e) {
+        console.error("Save error: ", e);
+        alert("❌ Failed to save changes.");
+    }
+};
+
 
 // 2. സെറ്റിംഗ്സ് ടോഗിളുകൾ ഫയർബേസിലേക്ക് ഓട്ടോ-സേവ് ചെയ്യുന്നു
 window.toggleSetting = async function(key, value) {
@@ -84,39 +148,6 @@ window.updateSetting = async function(key, value) {
     window.toggleSetting(key, value);
 };
 
-// 3. 💎 Account Center Pop-up Logic
-window.openAccountCenter = async function() {
-    const userRef = doc(db, "users", currentUserId);
-    const docSnap = await getDoc(userRef);
-    if (docSnap.exists()) {
-        const d = docSnap.data();
-        document.getElementById("accUserId").value = currentUserId;
-        document.getElementById("accDisplayUsername").value = d.username || currentUserId;
-        document.getElementById("accBio").value = d.bio || "";
-        document.getElementById("accWins").value = d.wins || 0;
-        
-        document.getElementById("accountModal").style.display = "flex";
-    }
-};
-
-window.closeAccountModal = function() {
-    document.getElementById("accountModal").style.display = "none";
-};
-
-window.saveAccountDetails = async function(event) {
-    event.preventDefault();
-    const bio = document.getElementById("accBio").value;
-    
-    try {
-        const userRef = doc(db, "users", currentUserId);
-        await updateDoc(userRef, { bio: bio });
-        alert("✅ Account details saved successfully!");
-        closeAccountModal();
-    } catch (e) {
-        console.error("Save error: ", e);
-        alert("❌ Failed to save changes.");
-    }
-};
 
 // 4. Follow & Invite Link Share
 window.shareInviteLink = function() {
