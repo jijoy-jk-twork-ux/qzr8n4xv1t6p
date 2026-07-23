@@ -524,14 +524,24 @@ body {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    background-color: #0095f6; /* Instagram Blue Color */
+    background-color: #0095f6; /* Instagram Blue */
     color: #ffffff;
-    font-size: 8px;
-    width: 14px;
-    height: 14px;
-    border-radius: 50%;
-    margin-left: 2px;
+    width: 15px;
+    height: 15px;
+    
+    /* 🔹 ഇൻസ്റ്റാഗ്രാം മോഡൽ 12-പയിന്റ് സ്റ്റാർ ഡിസൈൻ */
+    clip-path: polygon(
+        100% 50%, 93.3% 62.94%, 93.3% 77.45%, 80.86% 84.86%, 
+        70.71% 95.71%, 56.46% 93.3%, 43.54% 93.3%, 29.29% 95.71%, 
+        19.14% 84.86%, 6.7% 77.45%, 6.7% 62.94%, 0% 50%, 
+        6.7% 37.06%, 6.7% 22.55%, 19.14% 15.14%, 29.29% 4.29%, 
+        43.54% 6.7%, 56.46% 6.7%, 70.71% 4.29%, 80.86% 15.14%, 
+        93.3% 22.55%, 93.3% 37.06%
+    );
+    
+    flex-shrink: 0;
 }
+
 /* Delete Icon Styling */
 .delete-icon {
     font-size: 1.1rem;
