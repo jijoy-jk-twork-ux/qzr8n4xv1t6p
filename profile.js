@@ -82,12 +82,27 @@ async function initProfile(searchedUserId, searchedUsername, loggedInUser) {
     let displayPic = "";
     let followersList = [];
     let followingList = [];
+    let isVerified = false;
 
     if (isOwnProfile) {
         targetUserId = loggedInUser.uid;
+        
+        // 🔹 ഫയർബേസിൽ നിന്ന് യൂസറുടെ ലേറ്റസ്റ്റ് isVerified സ്റ്റാറ്റസ് എടുക്കുന്നു
+        try {
+            const mySnap = await getDoc(doc(db, "users", loggedInUser.uid));
+            if (mySnap.exists()) {
+                const myData = mySnap.data();
+                isVerified = myData.isVerified === true;
+                displayBio = myData.bio || loggedInUser.bio || "Exploring the digital space! 🚀";
+                displayPic = myData.profilePic || loggedInUser.profilePic || "";
+            }
+        } catch(e) {
+            isVerified = loggedInUser.isVerified === true;
+            displayBio = loggedInUser.bio || "Exploring the digital space! 🚀";
+            displayPic = loggedInUser.profilePic || loggedInUser.avatar || "";
+        }
+
         displayUsername = loggedInUser.username || "User";
-        displayBio = loggedInUser.bio || "Exploring the digital space! 🚀";
-        displayPic = loggedInUser.profilePic || loggedInUser.avatar || "";
         followersList = loggedInUser.followers || [];
         followingList = loggedInUser.following || [];
 
@@ -102,6 +117,7 @@ async function initProfile(searchedUserId, searchedUsername, loggedInUser) {
         displayPic = targetUserData ? (targetUserData.profilePic || targetUserData.avatar || "") : "";
         followersList = targetUserData && Array.isArray(targetUserData.followers) ? targetUserData.followers : [];
         followingList = targetUserData && Array.isArray(targetUserData.following) ? targetUserData.following : [];
+        isVerified = targetUserData ? (targetUserData.isVerified === true) : false;
 
         let myFollowing = loggedInUser.following || [];
         let isFollowing = myFollowing.includes(displayUsername);
@@ -109,18 +125,28 @@ async function initProfile(searchedUserId, searchedUsername, loggedInUser) {
         setupActionButton(false, isFollowing, targetUserId, displayUsername, loggedInUser);
     }
 
-    setProfileUI(displayUsername, displayBio, displayPic, followersList.length, followingList.length);
+    setProfileUI(displayUsername, displayBio, displayPic, followersList.length, followingList.length, isVerified);
     fetchPosts(targetUserId);
 }
 
-// 🎨 UI-ൽ പ്രൊഫൈൽ വിവരങ്ങൾ നൽകുന്ന ഹെൽപ്പർ ഫങ്ഷൻ
-function setProfileUI(username, bio, profilePic, followersCount, followingCount) {
+// 🎨 UI-ൽ പ്രൊഫൈൽ വിവരങ്ങളും Verified Badge-ഉം നൽകുന്ന ഫങ്ഷൻ
+function setProfileUI(username, bio, profilePic, followersCount, followingCount, isVerified) {
     document.getElementById("user-display-name").innerText = username;
     document.getElementById("user-handle").innerText = `@${username.toLowerCase()}`;
     document.getElementById("user-bio").innerText = bio;
 
     document.getElementById("followers-count").innerText = followersCount;
     document.getElementById("following-count").innerText = followingCount;
+
+    // 🔵 Verified Badge Show / Hide Logic (All users-നും വ്യക്തമായി കാണും)
+    const tickBadge = document.getElementById("profile-blue-tick");
+    if (tickBadge) {
+        if (isVerified) {
+            tickBadge.style.display = "inline-flex";
+        } else {
+            tickBadge.style.display = "none";
+        }
+    }
 
     const imgElem = document.getElementById("user-profile-pic");
     const fallbackAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(username)}&background=ff1e42&color=fff&size=128`;
