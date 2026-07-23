@@ -61,6 +61,7 @@ async function loadUserSettings() {
                 username: "User_" + Math.floor(Math.random() * 1000),
                 wins: 0,
                 bio: "",
+                isVerified: false, // Default status
                 settings: {
                     allowMentions: true,
                     isMuted: false,
@@ -71,6 +72,10 @@ async function loadUserSettings() {
             });
             loadUserSettings();
         }
+
+        // 🟢 പേജ് ലോഡ് ചെയ്യുമ്പോൾ തന്നെ വെരിഫിക്കേഷൻ സ്റ്റാറ്റസ് ഓട്ടോമാറ്റിക്കായി ചെക്ക് ചെയ്യുന്നു
+        await checkVerificationStatus();
+
     } catch (e) {
         console.error("Error loading settings:", e);
     }
@@ -149,7 +154,7 @@ async function checkVerificationStatus() {
     const statusTag = document.getElementById("badge-status-tag");
     const submitBtn = document.getElementById("submitBtn");
 
-    if (!statusTag || !submitBtn) return;
+    if (!statusTag) return;
 
     try {
         const userDocRef = doc(db, "users", currentUserId);
@@ -159,13 +164,15 @@ async function checkVerificationStatus() {
         if (userDocSnap.exists() && userDocSnap.data().isVerified === true) {
             statusTag.innerText = "✓ Verified Creator";
             statusTag.className = "status-badge status-verified";
-            submitBtn.innerText = "Already Verified";
-            submitBtn.disabled = true;
+            if (submitBtn) {
+                submitBtn.innerText = "Already Verified";
+                submitBtn.disabled = true;
+            }
             return;
         }
 
         // 🟠 2. അപേക്ഷ സമർപ്പിച്ച് റിവ്യൂവിൽ ആണെങ്കിൽ (Orange Badge)
-        // 💡 ശ്രദ്ധിക്കുക: Firestore-ലെ കളക്ഷൻ പേര് 'verification_requests' എന്ന് തന്നെ ഉറപ്പാക്കുക
+        // 💡 കളക്ഷൻ പേര് 'verification_requests' എന്ന് കൃത്യമാക്കി
         const q = query(
             collection(db, "verification_requests"), 
             where("userId", "==", currentUserId)
@@ -175,14 +182,18 @@ async function checkVerificationStatus() {
         if (!querySnapshot.empty) {
             statusTag.innerText = "⏳ Under Review";
             statusTag.className = "status-badge status-pending";
-            submitBtn.innerText = "Application Submitted";
-            submitBtn.disabled = true;
+            if (submitBtn) {
+                submitBtn.innerText = "Application Submitted";
+                submitBtn.disabled = true;
+            }
         } else {
             // 🔴 3. വെരിഫൈഡ് അല്ല / അപേക്ഷിച്ചിട്ടില്ല (Red Badge)
             statusTag.innerText = "✖ Not Verified";
-            statusTag.className = "status-badge status-not-verified"; // 'status-not-verified' ആക്കി
-            submitBtn.innerText = "Submit Application";
-            submitBtn.disabled = false;
+            statusTag.className = "status-badge status-not-verified";
+            if (submitBtn) {
+                submitBtn.innerText = "Submit Application";
+                submitBtn.disabled = false;
+            }
         }
 
     } catch (error) {
@@ -210,7 +221,8 @@ window.submitBadgeApplication = async function(event) {
     };
 
     try {
-        await addDoc(collection(db, "badge_requests"), payload);
+        // 💡 തിരുത്തിയത്: verification_requests എന്ന ഒരൊറ്റ കളക്ഷൻ നെയിം ഉപയോഗിച്ചു
+        await addDoc(collection(db, "verification_requests"), payload);
 
         if (GOOGLE_SCRIPT_URL) {
             await fetch(GOOGLE_SCRIPT_URL, {
@@ -223,6 +235,7 @@ window.submitBadgeApplication = async function(event) {
 
         alert("🎉 Creator Badge Application Submitted Successfully!");
         document.getElementById("badgeForm").reset();
+        await checkVerificationStatus(); // UI മാറ്റി അപ്‌ഡേറ്റ് ചെയ്യും
         closeBadgeModal();
 
     } catch (error) {
