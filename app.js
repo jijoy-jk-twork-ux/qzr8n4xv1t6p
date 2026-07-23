@@ -9,7 +9,9 @@ import {
     getFirestore, collection, addDoc, getDocs, getDoc, query, orderBy, 
     doc, deleteDoc, setDoc, updateDoc, arrayUnion, arrayRemove, increment 
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-import { getAuth, createUserWithEmailAndPassword, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+import { 
+    getAuth, createUserWithEmailAndPassword, signInAnonymously, onAuthStateChanged 
+} from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
 const firebaseConfig = {
     apiKey: "AIzaSyCNQaHi-L3fninLxkePZBaNR7vu6JiYEwQ",
@@ -23,16 +25,12 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
-const auth = getAuth(app);
 
 console.log("Firebase Connected successfully!");
 
 // 🔹 SILENT / ANONYMOUS BACKGROUND AUTH
 onAuthStateChanged(auth, (user) => {
     if (!user) {
-        // ലോഗിൻ ചെയ്തിട്ടില്ലെങ്കിൽ തനിയെ Anonymous Guest ആയി ലോഗിൻ ചെയ്യിക്കുന്നു
         signInAnonymously(auth)
             .then(() => console.log("Guest Session active 🎭"))
             .catch((err) => console.error("Anonymous Auth Error:", err));
@@ -41,20 +39,19 @@ onAuthStateChanged(auth, (user) => {
     }
 });
 
-
-console.log("Firebase Connected successfully!");
-
 // ==========================================
-// 2. PAGE GUARD & USER DATA RETRIEVAL
+// 2. PAGE GUARD & USER DATA RETRIEVAL (FIXED)
 // ==========================================
 let currentUserData = null;
 const userDataString = localStorage.getItem("infinity_user");
 
-if (!userDataString) {
-    window.location.replace("index.html");
-} else {
-    currentUserData = JSON.parse(userDataString);
-    console.log("Logged in user:", currentUserData.username);
+if (userDataString) {
+    try {
+        currentUserData = JSON.parse(userDataString);
+        console.log("Logged in user:", currentUserData.username);
+    } catch(e) {
+        console.error("User data parse error:", e);
+    }
 }
 
 // ==========================================
@@ -140,6 +137,14 @@ function resetAndCloseModal() {
 // ==========================================
 if (submitPostBtn) {
     submitPostBtn.addEventListener('click', async () => {
+        const currentUser = auth.currentUser;
+        
+        // 🛑 Guest User ആണെങ്കിൽ Upload തടയുന്നു
+        if (currentUser && currentUser.isAnonymous) {
+            alert("പോസ്റ്റ് ചെയ്യാൻ ദയവായി അക്കൗണ്ട് ലോഗിൻ ചെയ്യുക! 🔑");
+            return;
+        }
+
         if (!fileInput || !fileInput.files[0]) {
             alert("Please select a photo or video!");
             return;
@@ -190,18 +195,17 @@ if (submitPostBtn) {
 async function savePostToFirebase(mediaUrl, mediaType, caption, publicId) {
     try {
         const localUserData = localStorage.getItem("infinity_user");
-        let userId = "anonymous";
+        let userId = auth.currentUser ? auth.currentUser.uid : "anonymous";
         let username = "Anonymous User";
         let profilePic = "";
         let isVerified = false;
 
         if (localUserData) {
             const user = JSON.parse(localUserData);
-            userId = user.uid || "anonymous";
+            userId = user.uid || userId;
             username = user.username || "Anonymous User";
             profilePic = user.profilePic || user.avatar || "";
 
-            // 🔹 യൂസറുടെ Verified സ്റ്റാറ്റസ് Firestore-ൽ നിന്ന് നേരിട്ട് പരിശോധിക്കുന്നു
             if (userId !== "anonymous") {
                 const userDocSnap = await getDoc(doc(db, "users", userId));
                 if (userDocSnap.exists()) {
@@ -223,7 +227,7 @@ async function savePostToFirebase(mediaUrl, mediaType, caption, publicId) {
             userId: userId,
             username: username,
             profilePic: profilePic || fallbackAvatar,
-            isVerified: isVerified // 🔹 verified സ്റ്റാറ്റസ് ഫയർബേസിലേക്ക് നൽകുന്നു
+            isVerified: isVerified
         });
     } catch (error) {
         console.error("Firebase saving error:", error);
@@ -232,7 +236,7 @@ async function savePostToFirebase(mediaUrl, mediaType, caption, publicId) {
 }
 
 // ==========================================
-// 6. FETCH & DISPLAY POSTS (WITH BLUE TICK)
+// 6. FETCH & DISPLAY POSTS
 // ==========================================
 async function fetchAndDisplayPosts() {
     const feedContainer = document.querySelector('.feed-container');
@@ -252,14 +256,13 @@ async function fetchAndDisplayPosts() {
         const localUserData = localStorage.getItem("infinity_user");
         let currentUserId = "";
         if (localUserData) {
-            currentUserId = JSON.parse(localUserData).uid;
+            try { currentUserId = JSON.parse(localUserData).uid; } catch(e){}
         }
 
         for (const documentSnapshot of querySnapshot.docs) {
             const postData = documentSnapshot.data();
             const postId = documentSnapshot.id;
 
-            // 🔹 Verified Check: പോസ്റ്റിൽ ഇല്ലെങ്കിൽ യൂസർ ഡോക്യുമെന്റിൽ നിന്നും ചെക്ക് ചെയ്യും
             let isVerified = postData.isVerified === true;
             if (!isVerified && postData.userId && postData.userId !== "anonymous") {
                 try {
@@ -303,7 +306,6 @@ async function fetchAndDisplayPosts() {
                             ${blueTickHtml}
                         </div>
                     </div>
-                    
                     ${deleteIconHtml ? `<div style="display: flex; align-items: center;">${deleteIconHtml}</div>` : ''}
                 </div>
 
@@ -328,14 +330,10 @@ async function fetchAndDisplayPosts() {
                 </div>
             `;
 
-
             feedContainer.appendChild(postElement);
-
-            // ലൈക്ക് ഫങ്ഷൻ കണക്ട് ചെയ്യുന്നു
             setupLikeButton(postElement, postId, postData);
         }
 
-        // ഡിലീറ്റ് ഇവന്റ് ലിസണർ ബൈൻഡ് ചെയ്യുന്നു
         document.querySelectorAll('.delete-icon').forEach(button => {
             button.addEventListener('click', function() {
                 const id = this.getAttribute('data-id');
@@ -349,7 +347,7 @@ async function fetchAndDisplayPosts() {
 }
 
 // ==========================================
-// 7. LIKE BUTTON LOGIC (FIXED)
+// 7. LIKE BUTTON LOGIC
 // ==========================================
 async function setupLikeButton(postElement, postId, postData) {
     const likeIcon = postElement.querySelector('.like-icon');
@@ -362,12 +360,7 @@ async function setupLikeButton(postElement, postId, postData) {
     
     let currentUserId = "";
     if (localUserData) {
-        try {
-            const currentUser = JSON.parse(localUserData);
-            currentUserId = currentUser.uid || "";
-        } catch (e) {
-            console.error("Local storage user parse error:", e);
-        }
+        try { currentUserId = JSON.parse(localUserData).uid || ""; } catch (e) {}
     }
 
     let likedUsersList = Array.isArray(postData.likes) ? [...postData.likes] : []; 
@@ -419,8 +412,9 @@ async function setupLikeButton(postElement, postId, postData) {
     await updateLikeUI();
 
     likeIcon.onclick = async () => {
-        if (!currentUserId) {
-            alert("Please log in to like this post!");
+        const currentUser = auth.currentUser;
+        if (!currentUserId || (currentUser && currentUser.isAnonymous)) {
+            alert("ലൈക്ക് ചെയ്യാൻ ദയവായി ലോഗിൻ ചെയ്യുക! 🔑");
             return;
         }
 
@@ -449,11 +443,8 @@ async function setupLikeButton(postElement, postId, postData) {
         } catch (error) {
             console.error("Like error:", error);
             hasLiked = !hasLiked;
-            if (hasLiked) {
-                likedUsersList.push(currentUserId);
-            } else {
-                likedUsersList = likedUsersList.filter(id => id !== currentUserId);
-            }
+            if (hasLiked) likedUsersList.push(currentUserId);
+            else likedUsersList = likedUsersList.filter(id => id !== currentUserId);
             await updateLikeUI();
         } finally {
             likeIcon.style.pointerEvents = 'auto';
@@ -495,7 +486,7 @@ window.handleRegisterUser = async (email, password, username) => {
             username: formattedUsername,
             email: email,
             profilePic: defaultProfilePic,
-            isVerified: false, // Default verified false ആയിരിക്കും
+            isVerified: false,
             createdAt: new Date().toISOString()
         });
 
@@ -521,16 +512,12 @@ window.handleRegisterUser = async (email, password, username) => {
 document.addEventListener("DOMContentLoaded", () => {
     if (currentUserData) {
         const mainContent = document.getElementById("mainContent");
-        if (mainContent) {
-            mainContent.style.display = "block";
-        }
+        if (mainContent) mainContent.style.display = "block";
 
         const userDisplay = document.getElementById("navUsername");
         const profileDisplay = document.getElementById("navProfilePic");
 
-        if (userDisplay) {
-            userDisplay.innerText = `@${currentUserData.username}`;
-        }
+        if (userDisplay) userDisplay.innerText = `@${currentUserData.username}`;
         if (profileDisplay) {
             const fallbackAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(currentUserData.username)}&background=ff1e42&color=fff&size=128`;
             profileDisplay.src = currentUserData.profilePic || currentUserData.avatar || fallbackAvatar;
@@ -550,112 +537,15 @@ export function handleLogout() {
 }
 
 // ==========================================
-// 12. ANNOUNCEMENTS LOGIC
-// ==========================================
-if (window.location.pathname.includes("announcement.html")) {
-    document.addEventListener("DOMContentLoaded", () => {
-        const adminForm = document.getElementById("admin-update-form");
-        
-        if (currentUserData) {
-            const loggedUsername = currentUserData.username.trim().toLowerCase();
-            if (loggedUsername === "infinityspot") {
-                if (adminForm) adminForm.style.display = "block";
-            }
-        }
-
-        fetchAnnouncements();
-
-        const postUpdateBtn = document.getElementById("post-update-btn");
-        if (postUpdateBtn) {
-            postUpdateBtn.addEventListener("click", postNewAnnouncement);
-        }
-    });
-}
-
-async function postNewAnnouncement() {
-    const updateTextInput = document.getElementById("update-text");
-    if (!updateTextInput || !updateTextInput.value.trim()) {
-        alert("Start typing... !");
-        return;
-    }
-
-    try {
-        if (!currentUserData || currentUserData.username.trim().toLowerCase() !== "infinityspot") {
-            alert("You don't have permission!");
-            return;
-        }
-
-        await addDoc(collection(db, "announcements"), {
-            text: updateTextInput.value.trim(),
-            createdAt: new Date(),
-            postedBy: "Developer"
-        });
-
-        updateTextInput.value = "";
-        alert("Your update has been posted");
-        fetchAnnouncements(); 
-
-    } catch (error) {
-        console.error("Error:", error);
-        alert("Failed to post: " + error.message);
-    }
-}
-
-async function fetchAnnouncements() {
-    const updatesList = document.getElementById("updates-list");
-    if (!updatesList) return;
-
-    try {
-        const q = query(collection(db, "announcements"), orderBy("createdAt", "desc"));
-        const querySnapshot = await getDocs(q);
-
-        updatesList.innerHTML = "";
-
-        if (querySnapshot.empty) {
-            updatesList.innerHTML = "<p style='color:#666; text-align:center;'>No updates available!</p>";
-            return;
-        }
-
-        querySnapshot.forEach((docSnap) => {
-            const data = docSnap.data();
-            
-            let displayDate = "";
-            if (data.createdAt) {
-                const t = data.createdAt.toDate ? data.createdAt.toDate() : new Date(data.createdAt.seconds * 1000);
-                displayDate = t.toLocaleDateString() + " " + t.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-            }
-
-            const card = document.createElement("div");
-            card.className = "update-card";
-            card.innerHTML = `
-                <p>${data.text}</p>
-                <div class="update-meta">
-                    <span><i class="fa-solid fa-user-shield"></i> ${data.postedBy}</span>
-                    <span><i class="fa-regular fa-clock"></i> ${displayDate}</span>
-                </div>
-            `;
-            updatesList.appendChild(card);
-        });
-
-    } catch (error) {
-        console.error("Error:", error);
-        updatesList.innerHTML = "<p style='color:red; text-align:center;'>Failed to load!</p>";
-    }
-}
-
-// ==========================================
-// 13. COMMENT LOGIC (WITH BLUE TICK)
+// 12. COMMENT LOGIC
 // ==========================================
 window.openCommentSheet = function(postId) {
     const sheet = document.getElementById('comment-sheet');
     if (!sheet) return;
 
     window.currentActivePostId = postId;
-
     sheet.style.display = 'flex';
-    setTimeout(() => {
-        sheet.classList.add('show');
-    }, 10);
+    setTimeout(() => sheet.classList.add('show'), 10);
 
     if (typeof window.loadCommentsForPost === 'function') {
         window.loadCommentsForPost(postId);
@@ -740,6 +630,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (submitCommentBtn && commentInput) {
         submitCommentBtn.addEventListener('click', async () => {
+            const currentUser = auth.currentUser;
+            if (currentUser && currentUser.isAnonymous) {
+                alert("കമന്റ് ചെയ്യാൻ ദയവായി ലോഗിൻ ചെയ്യുക! 🔑");
+                return;
+            }
+
             const text = commentInput.value.trim();
             const postId = window.currentActivePostId;
 
@@ -784,5 +680,5 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 });
 
-// ഫീഡ് പേജ് ലോഡ് ആകുമ്പോൾ പോസ്റ്റുകൾ ലോഡ് ചെയ്യും
+// 🚀 പോസ്റ്റുകൾ ലോഡ് ചെയ്യുന്നു
 fetchAndDisplayPosts();
