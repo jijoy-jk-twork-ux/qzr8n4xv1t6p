@@ -134,7 +134,7 @@ window.shareInviteLink = function() {
 };
 
 // 5. 🌟 Creator Badge Application Pop-up Logic
-const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzFgihF_1-_tknI04jzKAySeJxD3tbtVOorlreveAPqGVXCyBbaaj7Lsz9p1JFLLcCX/exec";
+const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzMM-fKI6CPLFbgKJDhO1LqRTUdlXKTr_3k9mV51L5oEW9ckjbQ-9J82agWWRDOzL2u/exec";
 
 window.applyCreatorBadge = async function() {
     document.getElementById("badgeModal").style.display = "flex";
