@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="ml">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spymo - View Story</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: #000;
+            color: #fff;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+
+        /* Fullscreen Screen Container */
+        .story-container {
+            position: relative;
+            width: 100%;
+            max-width: 480px; /* Mobile View Width */
+            height: 100vh;
+            background-color: #111;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* Story Image */
+        .story-img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        /* Top Bar Overlay */
+        .story-header {
+            position: absolute;
+            top: 20px;
+            left: 0;
+            right: 0;
+            padding: 0 15px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            z-index: 10;
+            background: linear-gradient(180deg, rgba(0,0,0,0.7) 0%, transparent 100%);
+            padding-bottom: 20px;
+        }
+
+        .user-details {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .username {
+            font-weight: 600;
+            font-size: 15px;
+            text-shadow: 0 1px 3px rgba(0,0,0,0.8);
+        }
+
+        .close-btn {
+            color: #fff;
+            font-size: 22px;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        /* Music Sticker Overlay */
+        .music-sticker {
+            position: absolute;
+            top: 70px;
+            left: 15px;
+            background: rgba(0, 0, 0, 0.55);
+            backdrop-filter: blur(8px);
+            padding: 6px 14px;
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+            border: 1px solid rgba(255,255,255,0.2);
+            z-index: 9;
+        }
+
+        .music-sticker i {
+            color: #0095f6;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.2); }
+            100% { transform: scale(1); }
+        }
+
+        /* Bottom Caption Box */
+        .story-caption {
+            position: absolute;
+            bottom: 30px;
+            left: 15px;
+            right: 15px;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(5px);
+            padding: 10px 16px;
+            border-radius: 12px;
+            font-size: 14px;
+            text-align: center;
+            z-index: 10;
+        }
+
+        /* Invisible Navigation Touch Zones (Left / Right Tap) */
+        .touch-zone-left, .touch-zone-right {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 30%;
+            z-index: 5;
+        }
+        .touch-zone-left { left: 0; }
+        .touch-zone-right { right: 0; }
+    </style>
+</head>
+<body>
+
+    <div class="story-container">
+        <!-- Top Bar Header -->
+        <div class="story-header">
+            <div class="user-details">
+                <i class="fa-solid fa-circle-user" style="font-size: 24px;"></i>
+                <span class="username" id="story-username">Loading...</span>
+            </div>
+            <a href="home.html" class="close-btn"><i class="fa-solid fa-xmark"></i></a>
+        </div>
+
+        <!-- Music Sticker (Music ഉണ്ടെങ്കിൽ മാത്രം കാണിക്കും) -->
+        <div class="music-sticker" id="music-sticker" style="display: none;">
+            <i class="fa-solid fa-music"></i>
+            <span id="music-title-text">Music playing</span>
+        </div>
+
+        <!-- Main Story Image -->
+        <img id="story-img" class="story-img" src="" alt="Story">
+
+        <!-- Story Caption -->
+        <div class="story-caption" id="story-caption" style="display: none;"></div>
+
+        <!-- Background Audio Player (Hidden) -->
+        <audio id="story-audio" autoplay loop></audio>
+    </div>
+
+    <!-- Firebase Scripts -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+        const firebaseConfig = { 
+            apiKey: "AIzaSyCNQaHi-L3fninLxkePZBaNR7vu6JiYEwQ",
+            authDomain: "infinityspotx.firebaseapp.com",
+            projectId: "infinityspotx",
+            storageBucket: "infinityspotx.firebasestorage.app",
+            messagingSenderId: "400346792298",
+            appId: "1:400346792298:web:5fd101c225a547902b6513" 
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        // URL-ൽ നിന്ന് Story ID എടുക്കുന്നു
+        const urlParams = new URLSearchParams(window.location.search);
+        const storyId = urlParams.get('id');
+
+        window.addEventListener("DOMContentLoaded", async () => {
+            if (!storyId) {
+                window.location.href = "home.html";
+                return;
+            }
+
+            try {
+                const docRef = doc(db, "stories", storyId);
+                const docSnap = await getDoc(docRef);
+
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+
+                    // 🛑 24-Hour Check Logic
+                    const currentTime = new Date().getTime();
+                    const storyTime = data.createdAt ? data.createdAt.toDate().getTime() : currentTime;
+                    const hoursPassed = (currentTime - storyTime) / (1000 * 60 * 60);
+
+                    if (hoursPassed >= 24) {
+                        alert("ഈ സ്റ്റോറിയുടെ സമയം (24 മണിക്കൂർ) കഴിഞ്ഞു!");
+                        window.location.href = "home.html";
+                        return;
+                    }
+
+                    // 1. Username
+                    document.getElementById("story-username").innerText = data.username || "Anonymous";
+
+                    // 2. Image
+                    document.getElementById("story-img").src = data.imageUrl;
+
+                    // 3. Caption
+                    if (data.caption && data.caption.trim() !== "") {
+                        const capElem = document.getElementById("story-caption");
+                        capElem.innerText = data.caption;
+                        capElem.style.display = "block";
+                    }
+
+                    // 4. Music Play Logic
+                    if (data.music && data.music.audioUrl) {
+                        const audioElement = document.getElementById("story-audio");
+                        const stickerElem = document.getElementById("music-sticker");
+                        const titleElem = document.getElementById("music-title-text");
+
+                        audioElement.src = data.music.audioUrl;
+                        titleElem.innerText = `${data.music.title || 'Music'} - ${data.music.artist || ''}`;
+                        stickerElem.style.display = "flex";
+
+                        // Autoplay ചെയ്യാൻ ബ്രൗസർ അനുവാദം നൽകിയില്ലെങ്കിൽ യൂസർ ടാപ്പ് ചെയ്യുമ്പോൾ പ്ലേ ചെയ്യും
+                        audioElement.play().catch(err => {
+                            console.log("Autoplay blocked. Tap to play audio.");
+                            document.body.addEventListener('click', () => {
+                                audioElement.play();
+                            }, { once: true });
+                        });
+                    }
+
+                } else {
+                    alert("Story not found!");
+                    window.location.href = "home.html";
+                }
+            } catch (err) {
+                console.error("Error loading story:", err);
+                window.location.href = "home.html";
+            }
+        });
+    </script>
+</body>
+</html>
