@@ -124,38 +124,53 @@
             
     </div>
 
-    <!-- 💎 Account Center Pop-up Modal -->
-    <div id="accountModal" class="modal">
-        <div class="modal-content">
-            <span class="close-btn" onclick="closeAccountModal()">&times;</span>
-            <h3>💎 Accounts Center</h3>
-            <p class="modal-sub">Your personal details in Spymo</p>
-            
-            <form id="accountForm" onsubmit="saveAccountDetails(event)">
-                <div class="input-group">
-                    <label>User ID (Unique)</label>
-                    <input type="text" id="accUserId" readonly class="readonly-input">
+    <!-- 💎 Accounts Center Pop-up Modal (Read-Only & Realtime) -->
+<div id="accountModal" class="modal">
+    <div class="modal-content">
+        <span class="close-btn" onclick="closeAccountModal()">&times;</span>
+        <h3>💎 Accounts Center</h3>
+        <p class="modal-sub">Your live Firebase profile overview</p>
+        
+        <div class="account-details-form">
+            <div class="input-group">
+                <label>User ID</label>
+                <input type="text" id="accUserId" readonly class="readonly-input">
+            </div>
+
+            <div class="input-group">
+                <label>Full Name</label>
+                <input type="text" id="accName" readonly class="readonly-input">
+            </div>
+
+            <div class="input-group">
+                <label>Username</label>
+                <input type="text" id="accDisplayUsername" readonly class="readonly-input">
+            </div>
+
+            <div class="input-group">
+                <label>Email Address</label>
+                <input type="email" id="accEmail" readonly class="readonly-input">
+            </div>
+
+            <!-- Wins & Losses Side by Side -->
+            <div style="display: flex; gap: 10px;">
+                <div class="input-group" style="flex: 1;">
+                    <label style="color: #2ec4b6;">🏆 Total Wins</label>
+                    <input type="text" id="accWins" readonly class="readonly-input highlight-stat">
                 </div>
 
-                <div class="input-group">
-                    <label>Username (Cannot be changed)</label>
-                    <input type="text" id="accDisplayUsername" readonly class="readonly-input">
+                <div class="input-group" style="flex: 1;">
+                    <label style="color: #e71d36;">❌ Total Losses</label>
+                    <input type="text" id="accLosses" readonly class="readonly-input highlight-stat">
                 </div>
-                
-                <div class="input-group">
-                    <label>Display Name / Bio</label>
-                    <input type="text" id="accBio" placeholder="Enter your bio or name">
-                </div>
+            </div>
 
-                <div class="input-group">
-                    <label>Total Wins</label>
-                    <input type="text" id="accWins" readonly class="readonly-input">
-                </div>
-
-                <button type="submit" class="submit-btn">Save Changes</button>
-            </form>
+            <button type="button" onclick="closeAccountModal()" class="submit-btn" style="background: #262626; margin-top: 5px;">Close</button>
         </div>
     </div>
+</div>
+
+    
 
 <!-- 🌟 Creator Badge Application Pop-up Modal -->
 <div id="badgeModal" class="modal">
