@@ -37,7 +37,6 @@ const UPLOAD_PRESET = "Infinity_preset";
 window.onSpyUserUpdate = function(spyUser) {
     console.log("👁️ Spy Engine update received on Profile:", spyUser.username);
 
-    // LocalStorage മാച്ച് ആണോ എന്ന് നോക്കുന്നു
     const localUserData = localStorage.getItem("infinity_user");
     let loggedInUser = localUserData ? JSON.parse(localUserData) : null;
 
@@ -50,16 +49,14 @@ window.onSpyUserUpdate = function(spyUser) {
         const searchedUserId = urlParams.get('id');
         const searchedUsername = urlParams.get('username');
 
-        // Spy സിസ്റ്റം വഴി കിട്ടിയ ലേറ്റസ്റ്റ് യൂസർ അടിസ്ഥാനമാക്കി Profile ലോഡ് ചെയ്യുന്നു
         initProfile(searchedUserId, searchedUsername, loggedInUser);
     }
 };
 
-// 1. സാധാരണ ലോക്കൽ പരിശോധന (Initial Fallback)
+// 1. Initial Fallback
 const localUserData = localStorage.getItem("infinity_user") || localStorage.getItem("spy_active_user");
 
 if (!localUserData) {
-    // Spy System വരുന്നത് വരെ കുറച്ച് മില്ലിസെക്കൻഡുകൾ വെയിറ്റ് ചെയ്യുന്നു
     setTimeout(() => {
         if (!localStorage.getItem("infinity_user") && !localStorage.getItem("spy_active_user")) {
             alert("ദയവായി ലോഗിൻ ചെയ്യുക!");
@@ -109,30 +106,44 @@ async function initProfile(searchedUserId, searchedUsername, loggedInUser) {
     let displayUsername = "";
     let displayBio = "";
     let displayPic = "";
-    let followersList = [];
-    let followingList = [];
+    let followersCount = 0;
+    let followingCount = 0;
     let isVerified = false;
 
     if (isOwnProfile) {
         targetUserId = currentUid;
         
-        // 🔹 ഫയർബേസിൽ നിന്ന് യൂസറുടെ ലേറ്റസ്റ്റ് isVerified സ്റ്റാറ്റസ് എടുക്കുന്നു
+        // 🔹 ഫയർബേസിൽ നിന്ന് യൂസറുടെ ലേറ്റസ്റ്റ് ഫോളോവേഴ്സ് & വെരിഫൈഡ് വിവരങ്ങൾ നേരിട്ട് എടുക്കുന്നു
         try {
-            const mySnap = await getDoc(doc(doc(db, "users", targetUserId)));
+            // 🛑 fixed double doc() bug HERE
+            const mySnap = await getDoc(doc(db, "users", targetUserId));
             if (mySnap.exists()) {
                 const myData = mySnap.data();
                 isVerified = myData.isVerified === true;
                 displayBio = myData.bio || loggedInUser.bio || "Exploring the digital space! 🚀";
                 displayPic = myData.profilePic || loggedInUser.profilePic || "";
-                followersList = myData.followers || loggedInUser.followers || [];
-                followingList = myData.following || loggedInUser.following || [];
+
+                // Followers count calculation
+                if (Array.isArray(myData.followers)) {
+                    followersCount = myData.followers.length;
+                } else {
+                    followersCount = myData.followersCount || 0;
+                }
+
+                // Following count calculation
+                if (Array.isArray(myData.following)) {
+                    followingCount = myData.following.length;
+                } else {
+                    followingCount = myData.followingCount || 0;
+                }
             }
         } catch(e) {
+            console.error("Error loading profile from Firestore:", e);
             isVerified = loggedInUser.isVerified === true;
             displayBio = loggedInUser.bio || "Exploring the digital space! 🚀";
             displayPic = loggedInUser.profilePic || loggedInUser.avatar || "";
-            followersList = loggedInUser.followers || [];
-            followingList = loggedInUser.following || [];
+            followersCount = Array.isArray(loggedInUser.followers) ? loggedInUser.followers.length : (loggedInUser.followersCount || 0);
+            followingCount = Array.isArray(loggedInUser.following) ? loggedInUser.following.length : (loggedInUser.followingCount || 0);
         }
 
         displayUsername = loggedInUser.username || "User";
@@ -146,8 +157,12 @@ async function initProfile(searchedUserId, searchedUsername, loggedInUser) {
         displayUsername = targetUserData ? targetUserData.username : "User";
         displayBio = targetUserData ? (targetUserData.bio || "Exploring the digital space! 🚀") : "";
         displayPic = targetUserData ? (targetUserData.profilePic || targetUserData.avatar || "") : "";
-        followersList = targetUserData && Array.isArray(targetUserData.followers) ? targetUserData.followers : [];
-        followingList = targetUserData && Array.isArray(targetUserData.following) ? targetUserData.following : [];
+        
+        if (targetUserData) {
+            followersCount = Array.isArray(targetUserData.followers) ? targetUserData.followers.length : (targetUserData.followersCount || 0);
+            followingCount = Array.isArray(targetUserData.following) ? targetUserData.following.length : (targetUserData.followingCount || 0);
+        }
+
         isVerified = targetUserData ? (targetUserData.isVerified === true) : false;
 
         let myFollowing = loggedInUser.following || [];
@@ -156,7 +171,7 @@ async function initProfile(searchedUserId, searchedUsername, loggedInUser) {
         setupActionButton(false, isFollowing, targetUserId, displayUsername, loggedInUser);
     }
 
-    setProfileUI(displayUsername, displayBio, displayPic, followersList.length, followingList.length, isVerified);
+    setProfileUI(displayUsername, displayBio, displayPic, followersCount, followingCount, isVerified);
     fetchPosts(targetUserId);
 }
 
