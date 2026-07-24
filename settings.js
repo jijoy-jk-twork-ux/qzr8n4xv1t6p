@@ -34,58 +34,73 @@ const SECRET_PASSCODE = "2425";
 
 // 🔑 Random ID ഉണ്ടാക്കുന്നത് മാറ്റി, ലോഗിൻ ചെയ്ത യൂസറുടെ UID പിന്നീട് ലഭിക്കാനായി null ആക്കി
 let currentUserId = null;
-
-// 1. ഫയർബേസിൽ നിന്ന് യൂസറുടെ സെറ്റിംഗ്സ് ഡാറ്റ ലോഡ് ചെയ്യുന്നു
+// 1. യൂസറുടെ വിവരങ്ങൾ കൃത്യമായി ലോഡ് ചെയ്യുന്ന ഫങ്ഷൻ
 async function loadUserSettings() {
-    // 🔑 ഫയർബേസിലെ യഥാർത്ഥ UID ലഭിക്കാൻ ഓതന്റിക്കേഷൻ സ്റ്റേറ്റ് ചെക്ക് ചെയ്യുന്നു
     onAuthStateChanged(auth, async (user) => {
-        if (user) {
-            currentUserId = user.uid; // യഥാർത്ഥ ലോഗിൻ UID സെറ്റ് ചെയ്യുന്നു
+        // 🔒 ലോഗിൻ ചെയ്ത യൂസർ ഇല്ലെങ്കിൽ പ്രോസസ്സ് നിർത്തുന്നു
+        if (!user) {
+            console.log("No authenticated user found.");
+            return;
+        }
 
-            try {
-                const userRef = doc(db, "users", currentUserId);
-                const docSnap = await getDoc(userRef);
+        currentUserId = user.uid;
 
-                if (docSnap.exists()) {
-                    const data = docSnap.data();
-                    
-                    // Account Center Banner Update
-                    document.getElementById("acc-username").innerText = `@${data.username || currentUserId} • ${data.wins || 0} Wins`;
+        try {
+            const userRef = doc(db, "users", currentUserId);
+            const docSnap = await getDoc(userRef);
 
-                    // Toggles load
-                    if (data.settings) {
-                        document.getElementById("setting-mentions").checked = data.settings.allowMentions || false;
-                        document.getElementById("setting-muted").checked = data.settings.isMuted || false;
-                        document.getElementById("setting-datasaver").checked = data.settings.dataSaver || false;
-                        document.getElementById("setting-family").checked = data.settings.familyMode || false;
-                        if (data.settings.messages) {
-                            document.getElementById("setting-messages").value = data.settings.messages;
-                        }
-                    }
-                } else {
-                    await setDoc(userRef, {
-                        username: "User_" + Math.floor(Math.random() * 1000),
-                        wins: 0,
-                        bio: "",
-                        isVerified: false,
-                        settings: {
-                            allowMentions: true,
-                            isMuted: false,
-                            dataSaver: false,
-                            familyMode: false,
-                            messages: "everyone"
-                        }
-                    });
+            let username = "";
+
+            if (docSnap.exists()) {
+                const data = docSnap.data();
+                // 1. ഫയർബേസ് ഡാറ്റാബേസിലെ Username, ഇല്ലെങ്കിൽ Auth DisplayName
+                username = data.username || user.displayName || "";
+
+                // Account Center Banner Update (Username ഉണ്ടെങ്കിൽ മാത്രം കാണിക്കും)
+                const usernameElement = document.getElementById("acc-username");
+                if (usernameElement) {
+                    usernameElement.innerText = username ? `@${username} • ${data.wins || 0} Wins` : `${data.wins || 0} Wins`;
                 }
 
-                // 🟢 യഥാർത്ഥ UID ലഭിച്ചതിന് ശേഷം വെരിഫിക്കേഷൻ സ്റ്റാറ്റസ് ഓട്ടോമാറ്റിക്കായി ചെക്ക് ചെയ്യുന്നു
-                await checkVerificationStatus();
+                // Toggles load
+                if (data.settings) {
+                    if (document.getElementById("setting-mentions")) document.getElementById("setting-mentions").checked = data.settings.allowMentions || false;
+                    if (document.getElementById("setting-muted")) document.getElementById("setting-muted").checked = data.settings.isMuted || false;
+                    if (document.getElementById("setting-datasaver")) document.getElementById("setting-datasaver").checked = data.settings.dataSaver || false;
+                    if (document.getElementById("setting-family")) document.getElementById("setting-family").checked = data.settings.familyMode || false;
+                    if (document.getElementById("setting-messages") && data.settings.messages) {
+                        document.getElementById("setting-messages").value = data.settings.messages;
+                    }
+                }
+            } else {
+                // 🟢 പുതിയ യൂസർ ആണെങ്കിൽ റാൻഡം നെയിം ഉണ്ടാക്കില്ല. ലോഗിൻ ചെയ്ത പേര് ഉണ്ടെങ്കിൽ മാത്രം എടുക്കും.
+                username = user.displayName || "";
 
-            } catch (e) {
-                console.error("Error loading settings:", e);
+                await setDoc(userRef, {
+                    username: username, // ലോഗിൻ പേര് മാത്രം (ഇല്ലെങ്കിൽ Blank ആയിരിക്കും)
+                    wins: 0,
+                    bio: "",
+                    isVerified: false,
+                    settings: {
+                        allowMentions: true,
+                        isMuted: false,
+                        dataSaver: false,
+                        familyMode: false,
+                        messages: "everyone"
+                    }
+                });
+
+                const usernameElement = document.getElementById("acc-username");
+                if (usernameElement) {
+                    usernameElement.innerText = username ? `@${username} • 0 Wins` : "0 Wins";
+                }
             }
-        } else {
-            console.log("User is not logged in!");
+
+            // 🟢 വെരിഫിക്കേഷൻ സ്റ്റാറ്റസ് ചെക്ക് ചെയ്യുന്നു
+            await checkVerificationStatus();
+
+        } catch (e) {
+            console.error("Error loading settings:", e);
         }
     });
 }
