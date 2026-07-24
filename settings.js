@@ -34,47 +34,43 @@ const SECRET_PASSCODE = "2425";
 
 // 🔑 Random ID ഉണ്ടാക്കുന്നത് മാറ്റി, ലോഗിൻ ചെയ്ത യൂസറുടെ UID പിന്നീട് ലഭിക്കാനായി null ആക്കി
 let currentUserId = null;
-// 1. യൂസറുടെ വിവരങ്ങൾ കൃത്യമായി ലോഡ് ചെയ്യുന്ന ഫങ്ഷൻ
+// 1. എല്ലാ യൂസർമാരുടെയും വിവരങ്ങൾ കൃത്യമായി ലോഡ് ചെയ്യുന്ന ഫങ്ഷൻ
 async function loadUserSettings() {
     const usernameElement = document.getElementById("acc-username");
 
-    // ⚡ 1. FAST STEP: LocalStorage-ൽ ഉള്ള 'infinity_username' ആദ്യം എടുക്കുന്നു
-    const localUsername = localStorage.getItem("infinity_username");
-
-    if (localUsername && usernameElement) {
-        // ഫയർബേസിൽ നിന്ന് ഡാറ്റ വരുന്നത് വരെ സ്ക്രീനിൽ ഉടൻ Username കാണിക്കും!
-        usernameElement.innerText = `@${localUsername}`;
-    }
-
-    // 🚀 2. SECOND STEP: ഫയർബേസ് Auth വഴി ശരിയായ User ID വെച്ച് ഡാറ്റ എടുക്കുന്നു
+    // 🚀 1. Firebase Auth State ഫോളോ ചെയ്യുന്നു (ഓരോ യൂസറുടെയും Profile എടുക്കാൻ)
     onAuthStateChanged(auth, async (user) => {
         if (!user) {
-            console.log("No user logged in");
-            if (usernameElement) usernameElement.innerText = "Guest";
+            console.log("No authenticated user logged in.");
+            if (usernameElement) {
+                usernameElement.innerText = "Guest User";
+            }
             return;
         }
 
+        // ലോഗിൻ ചെയ്ത യൂസറുടെ Unique Firebase Auth UID എടുക്കുന്നു
         currentUserId = user.uid;
 
         try {
+            // 💡 'users' കളക്ഷനിൽ നിന്നാണ് ഡാറ്റ എടുക്കുന്നത്
             const userRef = doc(db, "users", currentUserId);
             const docSnap = await getDoc(userRef);
 
-            let username = "";
+            let currentUsername = "";
 
             if (docSnap.exists()) {
                 const data = docSnap.data();
-                // Firestore-ലെ പേര്, അല്ലെങ്കിൽ Auth DisplayName, അല്ലെങ്കിൽ localUsername
-                username = data.username || user.displayName || localUsername || "";
+                
+                // Firestore-ലെ 'users' കളക്ഷനിലുള്ള Username അല്ലെങ്കിൽ Auth DisplayName
+                currentUsername = data.username || user.displayName || "";
 
-                // 💾 'infinity_username' ആയി LocalStorage-ൽ അപ്ഡേറ്റ് ചെയ്യുന്നു
-                if (username) {
-                    localStorage.setItem("infinity_username", username);
+                if (currentUsername) {
+                    localStorage.setItem("infinity_username", currentUsername);
                 }
 
-                // UI ബാന്നർ അപ്ഡേറ്റ് ചെയ്യുന്നു
+                // UI അപ്ഡേറ്റ് ചെയ്യുന്നു (@username • Wins)
                 if (usernameElement) {
-                    usernameElement.innerText = username ? `@${username} • ${data.wins || 0} Wins` : `${data.wins || 0} Wins`;
+                    usernameElement.innerText = currentUsername ? `@${currentUsername} • ${data.wins || 0} Wins` : `${data.wins || 0} Wins`;
                 }
 
                 // Settings Toggles Load
@@ -88,15 +84,15 @@ async function loadUserSettings() {
                     }
                 }
             } else {
-                // പുതിയ അക്കൗണ്ട് ആണെങ്കിൽ (Username മാത്രം എടുക്കും, random ഉണ്ടാക്കില്ല)
-                username = user.displayName || localUsername || "";
+                // പുതിയ യൂസർ അക്കൗണ്ട് ആണെങ്കിൽ 'users' കളക്ഷനിൽ പുതിയ ഡോക്യുമെന്റ് ഉണ്ടാക്കുന്നു
+                currentUsername = user.displayName || "";
 
-                if (username) {
-                    localStorage.setItem("infinity_username", username);
+                if (currentUsername) {
+                    localStorage.setItem("infinity_username", currentUsername);
                 }
 
                 await setDoc(userRef, {
-                    username: username,
+                    username: currentUsername,
                     wins: 0,
                     bio: "",
                     isVerified: false,
@@ -110,15 +106,15 @@ async function loadUserSettings() {
                 });
 
                 if (usernameElement) {
-                    usernameElement.innerText = username ? `@${username} • 0 Wins` : "0 Wins";
+                    usernameElement.innerText = currentUsername ? `@${currentUsername} • 0 Wins` : "0 Wins";
                 }
             }
 
-            // Verification Status ചെക്ക് ചെയ്യുന്നു
+            // Verification status ചെക്ക് ചെയ്യുന്നു
             await checkVerificationStatus();
 
         } catch (e) {
-            console.error("Error fetching user data:", e);
+            console.error("Error loading user profile from users collection:", e);
         }
     });
 }
