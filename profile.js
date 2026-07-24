@@ -31,16 +31,44 @@ const db = getFirestore(app);
 const CLOUD_NAME = "wbmr3lkx";
 const UPLOAD_PRESET = "Infinity_preset";
 
-// 1. ലോക്കൽ സ്റ്റോറേജിൽ നിന്ന് യൂസർ ഡാറ്റ എടുക്കുന്നു
-const localUserData = localStorage.getItem("infinity_user");
+// -----------------------------------------------------------
+// 👁️ SPY SYSTEM INTEGRATION FOR PROFILE PAGE
+// -----------------------------------------------------------
+window.onSpyUserUpdate = function(spyUser) {
+    console.log("👁️ Spy Engine update received on Profile:", spyUser.username);
+
+    // LocalStorage മാച്ച് ആണോ എന്ന് നോക്കുന്നു
+    const localUserData = localStorage.getItem("infinity_user");
+    let loggedInUser = localUserData ? JSON.parse(localUserData) : null;
+
+    if (!loggedInUser && spyUser) {
+        loggedInUser = spyUser;
+    }
+
+    if (loggedInUser) {
+        const urlParams = new URLSearchParams(window.location.search);
+        const searchedUserId = urlParams.get('id');
+        const searchedUsername = urlParams.get('username');
+
+        // Spy സിസ്റ്റം വഴി കിട്ടിയ ലേറ്റസ്റ്റ് യൂസർ അടിസ്ഥാനമാക്കി Profile ലോഡ് ചെയ്യുന്നു
+        initProfile(searchedUserId, searchedUsername, loggedInUser);
+    }
+};
+
+// 1. സാധാരണ ലോക്കൽ പരിശോധന (Initial Fallback)
+const localUserData = localStorage.getItem("infinity_user") || localStorage.getItem("spy_active_user");
 
 if (!localUserData) {
-    alert("ദയവായി ലോഗിൻ ചെയ്യുക!");
-    window.location.href = "index.html"; 
+    // Spy System വരുന്നത് വരെ കുറച്ച് മില്ലിസെക്കൻഡുകൾ വെയിറ്റ് ചെയ്യുന്നു
+    setTimeout(() => {
+        if (!localStorage.getItem("infinity_user") && !localStorage.getItem("spy_active_user")) {
+            alert("ദയവായി ലോഗിൻ ചെയ്യുക!");
+            window.location.href = "index.html";
+        }
+    }, 500);
 } else {
     const loggedInUser = JSON.parse(localUserData);
 
-    // 2. URL-ൽ മറ്റ് ആരുടെയെങ്കിലും 'id' അല്ലെങ്കിൽ 'username' ഉണ്ടോ എന്ന് നോക്കുന്നു
     const urlParams = new URLSearchParams(window.location.search);
     const searchedUserId = urlParams.get('id');
     const searchedUsername = urlParams.get('username');
@@ -75,7 +103,8 @@ async function initProfile(searchedUserId, searchedUsername, loggedInUser) {
         console.error("Target user fetch error:", err);
     }
 
-    const isOwnProfile = !targetUserId || (targetUserId === loggedInUser.uid);
+    const currentUid = loggedInUser.uid || loggedInUser.id;
+    const isOwnProfile = !targetUserId || (targetUserId === currentUid);
 
     let displayUsername = "";
     let displayBio = "";
@@ -85,26 +114,28 @@ async function initProfile(searchedUserId, searchedUsername, loggedInUser) {
     let isVerified = false;
 
     if (isOwnProfile) {
-        targetUserId = loggedInUser.uid;
+        targetUserId = currentUid;
         
         // 🔹 ഫയർബേസിൽ നിന്ന് യൂസറുടെ ലേറ്റസ്റ്റ് isVerified സ്റ്റാറ്റസ് എടുക്കുന്നു
         try {
-            const mySnap = await getDoc(doc(db, "users", loggedInUser.uid));
+            const mySnap = await getDoc(doc(doc(db, "users", targetUserId)));
             if (mySnap.exists()) {
                 const myData = mySnap.data();
                 isVerified = myData.isVerified === true;
                 displayBio = myData.bio || loggedInUser.bio || "Exploring the digital space! 🚀";
                 displayPic = myData.profilePic || loggedInUser.profilePic || "";
+                followersList = myData.followers || loggedInUser.followers || [];
+                followingList = myData.following || loggedInUser.following || [];
             }
         } catch(e) {
             isVerified = loggedInUser.isVerified === true;
             displayBio = loggedInUser.bio || "Exploring the digital space! 🚀";
             displayPic = loggedInUser.profilePic || loggedInUser.avatar || "";
+            followersList = loggedInUser.followers || [];
+            followingList = loggedInUser.following || [];
         }
 
         displayUsername = loggedInUser.username || "User";
-        followersList = loggedInUser.followers || [];
-        followingList = loggedInUser.following || [];
 
         const editLabel = document.getElementById("edit-pic-label");
         if (editLabel) editLabel.style.display = "flex";
@@ -131,35 +162,40 @@ async function initProfile(searchedUserId, searchedUsername, loggedInUser) {
 
 // 🎨 UI-ൽ പ്രൊഫൈൽ വിവരങ്ങളും Verified Badge-ഉം നൽകുന്ന ഫങ്ഷൻ
 function setProfileUI(username, bio, profilePic, followersCount, followingCount, isVerified) {
-    document.getElementById("user-display-name").innerText = username;
-    document.getElementById("user-handle").innerText = `@${username.toLowerCase()}`;
-    document.getElementById("user-bio").innerText = bio;
+    const nameElem = document.getElementById("user-display-name");
+    const handleElem = document.getElementById("user-handle");
+    const bioElem = document.getElementById("user-bio");
 
-    document.getElementById("followers-count").innerText = followersCount;
-    document.getElementById("following-count").innerText = followingCount;
+    if (nameElem) nameElem.innerText = username;
+    if (handleElem) handleElem.innerText = `@${username.toLowerCase()}`;
+    if (bioElem) bioElem.innerText = bio;
 
-    // 🔵 Verified Badge Show / Hide Logic (All users-നും വ്യക്തമായി കാണും)
+    const followersElem = document.getElementById("followers-count");
+    const followingElem = document.getElementById("following-count");
+
+    if (followersElem) followersElem.innerText = followersCount;
+    if (followingElem) followingElem.innerText = followingCount;
+
+    // 🔵 Verified Badge Show / Hide Logic
     const tickBadge = document.getElementById("profile-blue-tick");
     if (tickBadge) {
-        if (isVerified) {
-            tickBadge.style.display = "inline-flex";
-        } else {
-            tickBadge.style.display = "none";
-        }
+        tickBadge.style.display = isVerified ? "inline-flex" : "none";
     }
 
     const imgElem = document.getElementById("user-profile-pic");
-    const fallbackAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(username)}&background=ff1e42&color=fff&size=128`;
+    if (imgElem) {
+        const fallbackAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(username)}&background=ff1e42&color=fff&size=128`;
 
-    if (profilePic && profilePic.trim() !== "") {
-        imgElem.src = profilePic;
-    } else {
-        imgElem.src = fallbackAvatar;
+        if (profilePic && profilePic.trim() !== "") {
+            imgElem.src = profilePic;
+        } else {
+            imgElem.src = fallbackAvatar;
+        }
+
+        imgElem.onerror = function() {
+            this.src = fallbackAvatar;
+        };
     }
-
-    imgElem.onerror = function() {
-        this.src = fallbackAvatar;
-    };
 }
 
 // 🤝 ACTION BUTTON (Edit Profile Modal vs Follow / Unfollow)
@@ -178,54 +214,55 @@ function setupActionButton(isOwnProfile, isFollowing, targetUserId, targetUserna
         const saveBioBtn = document.getElementById("save-bio-btn");
         const bioInput = document.getElementById("edit-bio-input");
 
-        // Edit Profile ബട്ടൺ ക്ലിക്ക് ചെയ്യുമ്പോൾ Pop-up Modal തുറക്കുന്നു
-        actionBtn.onclick = () => {
-            bioInput.value = loggedInUser.bio || "Exploring the digital space! 🚀";
-            modal.style.display = "flex";
-        };
+        if (modal) {
+            actionBtn.onclick = () => {
+                if (bioInput) bioInput.value = loggedInUser.bio || "Exploring the digital space! 🚀";
+                modal.style.display = "flex";
+            };
 
-        // Pop-up അടയ്ക്കുന്നു
-        closeModalBtn.onclick = () => {
-            modal.style.display = "none";
-        };
-
-        // Modal-ന് പുറത്ത് ക്ലിക്ക് ചെയ്താൽ ക്ലോസ് ആകും
-        window.onclick = (event) => {
-            if (event.target === modal) {
-                modal.style.display = "none";
+            if (closeModalBtn) {
+                closeModalBtn.onclick = () => {
+                    modal.style.display = "none";
+                };
             }
-        };
 
-        // Save Bio Logic
-        saveBioBtn.onclick = async () => {
-            const newBio = bioInput.value.trim();
-            if (!newBio) return;
+            window.onclick = (event) => {
+                if (event.target === modal) {
+                    modal.style.display = "none";
+                }
+            };
 
-            saveBioBtn.innerText = "Saving...";
-            saveBioBtn.disabled = true;
+            if (saveBioBtn) {
+                saveBioBtn.onclick = async () => {
+                    const newBio = bioInput.value.trim();
+                    if (!newBio) return;
 
-            try {
-                // 1. Firestore Database അപ്‌ഡേറ്റ്
-                await setDoc(doc(db, "users", loggedInUser.uid), {
-                    bio: newBio
-                }, { merge: true });
+                    saveBioBtn.innerText = "Saving...";
+                    saveBioBtn.disabled = true;
 
-                // 2. LocalStorage അപ്‌ഡേറ്റ്
-                loggedInUser.bio = newBio;
-                localStorage.setItem("infinity_user", JSON.stringify(loggedInUser));
+                    try {
+                        const uid = loggedInUser.uid || loggedInUser.id;
+                        await setDoc(doc(db, "users", uid), {
+                            bio: newBio
+                        }, { merge: true });
 
-                // 3. UI അപ്‌ഡേറ്റ്
-                document.getElementById("user-bio").innerText = newBio;
-                modal.style.display = "none";
+                        loggedInUser.bio = newBio;
+                        localStorage.setItem("infinity_user", JSON.stringify(loggedInUser));
 
-            } catch (err) {
-                console.error("Bio Update Error:", err);
-                alert("Bio അപ്‌ഡേറ്റ് ചെയ്യാൻ പറ്റിയില്ല!");
-            } finally {
-                saveBioBtn.innerText = "Save Changes";
-                saveBioBtn.disabled = false;
+                        const bioElem = document.getElementById("user-bio");
+                        if (bioElem) bioElem.innerText = newBio;
+                        modal.style.display = "none";
+
+                    } catch (err) {
+                        console.error("Bio Update Error:", err);
+                        alert("Bio അപ്‌ഡേറ്റ് ചെയ്യാൻ പറ്റിയില്ല!");
+                    } finally {
+                        saveBioBtn.innerText = "Save Changes";
+                        saveBioBtn.disabled = false;
+                    }
+                };
             }
-        };
+        }
 
     } else {
         function updateBtnState(followingState) {
@@ -245,17 +282,18 @@ function setupActionButton(isOwnProfile, isFollowing, targetUserId, targetUserna
 
             let myFollowing = loggedInUser.following || [];
             let followersSpan = document.getElementById("followers-count");
-            let currentFollowersCount = parseInt(followersSpan.innerText) || 0;
+            let currentFollowersCount = followersSpan ? (parseInt(followersSpan.innerText) || 0) : 0;
 
             try {
-                const myDocRef = doc(db, "users", loggedInUser.uid);
+                const myUid = loggedInUser.uid || loggedInUser.id;
+                const myDocRef = doc(db, "users", myUid);
                 const targetDocRef = doc(db, "users", targetUserId);
 
                 if (!isFollowing) {
                     isFollowing = true;
                     myFollowing.push(targetUsername);
                     updateBtnState(true);
-                    followersSpan.innerText = currentFollowersCount + 1;
+                    if (followersSpan) followersSpan.innerText = currentFollowersCount + 1;
 
                     await updateDoc(myDocRef, { following: arrayUnion(targetUsername) });
                     if (targetUserId) {
@@ -265,7 +303,7 @@ function setupActionButton(isOwnProfile, isFollowing, targetUserId, targetUserna
                     isFollowing = false;
                     myFollowing = myFollowing.filter(u => u !== targetUsername);
                     updateBtnState(false);
-                    followersSpan.innerText = Math.max(0, currentFollowersCount - 1);
+                    if (followersSpan) followersSpan.innerText = Math.max(0, currentFollowersCount - 1);
 
                     await updateDoc(myDocRef, { following: arrayRemove(targetUsername) });
                     if (targetUserId) {
@@ -304,7 +342,7 @@ function setupProfilePicUpload(loggedInUser) {
         const profileImgElem = document.getElementById("user-profile-pic");
 
         try {
-            profileImgElem.style.opacity = "0.4";
+            if (profileImgElem) profileImgElem.style.opacity = "0.4";
 
             const formData = new FormData();
             formData.append("file", file);
@@ -322,8 +360,9 @@ function setupProfilePicUpload(loggedInUser) {
             }
 
             const newPicUrl = data.secure_url;
+            const uid = loggedInUser.uid || loggedInUser.id;
 
-            await setDoc(doc(db, "users", loggedInUser.uid), {
+            await setDoc(doc(db, "users", uid), {
                 profilePic: newPicUrl,
                 avatar: newPicUrl
             }, { merge: true });
@@ -332,15 +371,17 @@ function setupProfilePicUpload(loggedInUser) {
             loggedInUser.avatar = newPicUrl;
             localStorage.setItem("infinity_user", JSON.stringify(loggedInUser));
 
-            profileImgElem.src = newPicUrl;
-            profileImgElem.style.opacity = "1";
+            if (profileImgElem) {
+                profileImgElem.src = newPicUrl;
+                profileImgElem.style.opacity = "1";
+            }
 
             alert("പ്രൊഫൈൽ ചിത്രം വിജയകരമായി മാറ്റി! 🔥");
 
         } catch (err) {
             console.error("Profile Pic Update Error:", err);
             alert("അപ്‌ലോഡിൽ തടസ്സം വന്നു. UPLOAD_PRESET പരിശോധിക്കുക!");
-            profileImgElem.style.opacity = "1";
+            if (profileImgElem) profileImgElem.style.opacity = "1";
         }
     });
 }
