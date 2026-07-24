@@ -34,87 +34,94 @@ const SECRET_PASSCODE = "2425";
 
 // 🔑 Random ID ഉണ്ടാക്കുന്നത് മാറ്റി, ലോഗിൻ ചെയ്ത യൂസറുടെ UID പിന്നീട് ലഭിക്കാനായി null ആക്കി
 let currentUserId = null;
-// 1. എല്ലാ യൂസർമാരുടെയും വിവരങ്ങൾ കൃത്യമായി ലോഡ് ചെയ്യുന്ന ഫങ്ഷൻ
+// 🚀 ഫയർബേസ് സെഷൻ വഴി Username-ഉം Verification Status-ഉം കൃത്യമായി ലോഡ് ചെയ്യുന്ന ഫങ്ഷൻ
 async function loadUserSettings() {
     const usernameElement = document.getElementById("acc-username");
 
-    // 🚀 1. Firebase Auth State ഫോളോ ചെയ്യുന്നു (ഓരോ യൂസറുടെയും Profile എടുക്കാൻ)
+    // 1. പഴയ localstorage ഡാറ്റ ഉണ്ടെങ്കിൽ അത് വെച്ച് UI പെട്ടെന്ന് ലോഡ് ആക്കുന്നു (Fast UI Render)
+    const cachedUsername = localStorage.getItem("infinity_username");
+    if (cachedUsername && usernameElement) {
+        usernameElement.innerText = `@${cachedUsername}`;
+    }
+
+    // 2. ഫയർബേസ് ഓതന്റിക്കേഷൻ സെഷൻ ഓട്ടോമാറ്റിക്കായി കണ്ടെത്തുന്ന ലിസണർ
     onAuthStateChanged(auth, async (user) => {
-        if (!user) {
-            console.log("No authenticated user logged in.");
-            if (usernameElement) {
+        if (user) {
+            currentUserId = user.uid;
+
+            try {
+                // 'users' കളക്ഷനിൽ നിന്ന് UID വെച്ച് ഡാറ്റ ഫെച്ച് ചെയ്യുന്നു
+                const userRef = doc(db, "users", currentUserId);
+                const docSnap = await getDoc(userRef);
+
+                let currentUsername = "";
+
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    
+                    // ഡാറ്റാബേസ് പേര് അല്ലെങ്കിൽ Auth DisplayName
+                    currentUsername = data.username || user.displayName || cachedUsername || "";
+
+                    // LocalStorage അപ്ഡേറ്റ് ചെയ്യുന്നു
+                    if (currentUsername) {
+                        localStorage.setItem("infinity_username", currentUsername);
+                    }
+
+                    // Banner Update (@username • Wins)
+                    if (usernameElement) {
+                        usernameElement.innerText = currentUsername 
+                            ? `@${currentUsername} • ${data.wins || 0} Wins` 
+                            : `${data.wins || 0} Wins`;
+                    }
+
+                    // Settings Load
+                    if (data.settings) {
+                        if (document.getElementById("setting-mentions")) document.getElementById("setting-mentions").checked = data.settings.allowMentions || false;
+                        if (document.getElementById("setting-muted")) document.getElementById("setting-muted").checked = data.settings.isMuted || false;
+                        if (document.getElementById("setting-datasaver")) document.getElementById("setting-datasaver").checked = data.settings.dataSaver || false;
+                        if (document.getElementById("setting-family")) document.getElementById("setting-family").checked = data.settings.familyMode || false;
+                        if (document.getElementById("setting-messages") && data.settings.messages) {
+                            document.getElementById("setting-messages").value = data.settings.messages;
+                        }
+                    }
+                } else {
+                    // പുതിയ യൂസർ ആണെങ്കിൽ
+                    currentUsername = user.displayName || cachedUsername || "";
+
+                    if (currentUsername) {
+                        localStorage.setItem("infinity_username", currentUsername);
+                    }
+
+                    await setDoc(userRef, {
+                        username: currentUsername,
+                        wins: 0,
+                        bio: "",
+                        isVerified: false,
+                        settings: {
+                            allowMentions: true,
+                            isMuted: false,
+                            dataSaver: false,
+                            familyMode: false,
+                            messages: "everyone"
+                        }
+                    });
+
+                    if (usernameElement) {
+                        usernameElement.innerText = currentUsername ? `@${currentUsername} • 0 Wins` : "0 Wins";
+                    }
+                }
+
+                // 🟢 യൂസർ ലോഗിൻ സ്ഥിരീകരിച്ചതിന് ശേഷം തനിയെ Verified ആണോ എന്ന് ചെക്ക് ചെയ്യുന്നു
+                await checkVerificationStatus();
+
+            } catch (e) {
+                console.error("Error loading user profile:", e);
+            }
+        } else {
+            // ശരിക്കും ലോഗൗട്ട് ആയ അവസ്ഥയിൽ മാത്രം Guest കാണിക്കും
+            if (!cachedUsername && usernameElement) {
                 usernameElement.innerText = "Guest User";
             }
-            return;
-        }
-
-        // ലോഗിൻ ചെയ്ത യൂസറുടെ Unique Firebase Auth UID എടുക്കുന്നു
-        currentUserId = user.uid;
-
-        try {
-            // 💡 'users' കളക്ഷനിൽ നിന്നാണ് ഡാറ്റ എടുക്കുന്നത്
-            const userRef = doc(db, "users", currentUserId);
-            const docSnap = await getDoc(userRef);
-
-            let currentUsername = "";
-
-            if (docSnap.exists()) {
-                const data = docSnap.data();
-                
-                // Firestore-ലെ 'users' കളക്ഷനിലുള്ള Username അല്ലെങ്കിൽ Auth DisplayName
-                currentUsername = data.username || user.displayName || "";
-
-                if (currentUsername) {
-                    localStorage.setItem("infinity_username", currentUsername);
-                }
-
-                // UI അപ്ഡേറ്റ് ചെയ്യുന്നു (@username • Wins)
-                if (usernameElement) {
-                    usernameElement.innerText = currentUsername ? `@${currentUsername} • ${data.wins || 0} Wins` : `${data.wins || 0} Wins`;
-                }
-
-                // Settings Toggles Load
-                if (data.settings) {
-                    if (document.getElementById("setting-mentions")) document.getElementById("setting-mentions").checked = data.settings.allowMentions || false;
-                    if (document.getElementById("setting-muted")) document.getElementById("setting-muted").checked = data.settings.isMuted || false;
-                    if (document.getElementById("setting-datasaver")) document.getElementById("setting-datasaver").checked = data.settings.dataSaver || false;
-                    if (document.getElementById("setting-family")) document.getElementById("setting-family").checked = data.settings.familyMode || false;
-                    if (document.getElementById("setting-messages") && data.settings.messages) {
-                        document.getElementById("setting-messages").value = data.settings.messages;
-                    }
-                }
-            } else {
-                // പുതിയ യൂസർ അക്കൗണ്ട് ആണെങ്കിൽ 'users' കളക്ഷനിൽ പുതിയ ഡോക്യുമെന്റ് ഉണ്ടാക്കുന്നു
-                currentUsername = user.displayName || "";
-
-                if (currentUsername) {
-                    localStorage.setItem("infinity_username", currentUsername);
-                }
-
-                await setDoc(userRef, {
-                    username: currentUsername,
-                    wins: 0,
-                    bio: "",
-                    isVerified: false,
-                    settings: {
-                        allowMentions: true,
-                        isMuted: false,
-                        dataSaver: false,
-                        familyMode: false,
-                        messages: "everyone"
-                    }
-                });
-
-                if (usernameElement) {
-                    usernameElement.innerText = currentUsername ? `@${currentUsername} • 0 Wins` : "0 Wins";
-                }
-            }
-
-            // Verification status ചെക്ക് ചെയ്യുന്നു
-            await checkVerificationStatus();
-
-        } catch (e) {
-            console.error("Error loading user profile from users collection:", e);
         }
     });
 }
