@@ -14,30 +14,29 @@
     <header class="top-bar">
         <div class="logo">Spymo</div>
         <div class="top-icons">
-            <a href="announcement.html" style="color: inherit; text-decoration: none;"><i class="fa-regular fa-bell" id="announcement-bell"></i>
+            <a href="announcement.html" style="color: inherit; text-decoration: none;"><i class="fa-regular fa-bell" id="announcement-bell"></i></a>
             <i class="fa-regular fa-heart"></i>
             <a href="numusers.html" style="color: inherit; text-decoration: none;"><i class="fa-regular fa-paper-plane"></i></a>
         </div>
     </header>
 
-    <!-- 🟦 Square Stories Section -->
-<div class="stories-wrapper" id="stories-container">
-    <!-- യൂസറുടെ സ്വന്തം സ്റ്റോറി ആഡ് ചെയ്യാനുള്ള ബട്ടൺ (Your Story) -->
-    <div class="story-square-card my-story-card" onclick="window.location.href='create-story.html'">
-        <i class="fa-solid fa-plus add-icon"></i>
-        <span class="story-username-tag my-story-tag">Your Story</span>
+    <!-- 🟦 Square Stories Section (Dark Theme Compatible) -->
+    <div class="stories-wrapper" id="stories-container">
+        <!-- യൂസറുടെ സ്വന്തം സ്റ്റോറി ആഡ് ചെയ്യാനുള്ള ബട്ടൺ (Your Story) -->
+        <div class="story-square-card my-story-card" onclick="window.location.href='create-story.html'">
+            <div class="add-icon-wrapper">
+                <i class="fa-solid fa-plus add-icon"></i>
+            </div>
+            <span class="story-username-tag my-story-tag">Your Story</span>
+        </div>
+        
+        <!-- ബാക്കി യൂസർമാരുടെ സ്റ്റോറികൾ home-stories.js വഴി ഓട്ടോമാറ്റിക് ആയി ഇതിലേക്ക് ലോഡ് ആകും -->
     </div>
-    
-    <!-- ബാക്കി യൂസർമാരുടെ സ്റ്റോറികൾ JS വഴി ഓട്ടോമാറ്റിക് ആയി ഇതിലേക്ക് ലോഡ് ആകും -->
-</div>
 
     <!-- Main Content (Feed) -->
-    <!-- ഫയർബേസിൽ നിന്നുള്ള പോസ്റ്റുകൾ ഓട്ടോമാറ്റിക് ആയി ഇതിന്റെ ഉള്ളിലേക്കാണ് വരിക -->
     <main class="feed-container">
-        
         <!-- ഡാറ്റാബേസ് കണക്ട് ആകുന്നതുവരെ കാണിക്കാൻ ഒരു ചെറിയ ലോഡിംഗ് മെസ്സേജ് -->
         <p style="text-align:center; padding:20px; color:#888;">Loading posts...</p>
-
     </main>
     
     <!-- Upload Post Modal (Popup Window) -->
@@ -72,7 +71,7 @@
         </div>
     </div>
 
-    <!-- 💬 Comment Bottom Sheet (ഇതാണ് പുതിയതായി ചേർത്ത കമന്റ് ബോക്സ്) -->
+    <!-- 💬 Comment Bottom Sheet -->
     <div id="comment-sheet" class="comment-sheet">
         <div class="sheet-overlay"></div>
         <div class="sheet-content">
@@ -95,20 +94,16 @@
         </div>
     </div>
 
-
     <!-- Bottom Navigation Bar -->
     <nav class="bottom-nav">
         <i class="fa-solid fa-house active"></i>
         <a href="search.html"><i class="fa-solid fa-magnifying-glass"></i></a>
         <i class="fa-regular fa-square-plus" id="upload-btn"></i>
         <a href="explore.html" style="color: inherit; text-decoration: none;"><i class="fa-solid fa-clapperboard"></i></a>
-        <a href="profile.html" style="color: inherit; text-decoration: none;">
-    <i class="fa-regular fa-user"></i>
-</a>
-
+        <a href="profile.html" style="color: inherit; text-decoration: none;"><i class="fa-regular fa-user"></i></a>
     </nav>
+
     <script>
-    // ബ്രൗസർ Service Worker സപ്പോർട്ട് ചെയ്യുന്നുണ്ടോ എന്ന് പരിശോധിക്കുന്നു
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
             navigator.serviceWorker.register('./sw.js')
@@ -120,9 +115,9 @@
                 });
         });
     }
-</script>
+    </script>
 
-    <!-- ജാവാസ്ക്രിപ്റ്റ് ഫയൽ കണക്ട് ചെയ്യുന്നു (Module ടൈപ്പിൽ തന്നെ) -->
+    <!-- ജാവാസ്ക്രിപ്റ്റ് ഫയലുകൾ -->
     <script type="module" src="stories.js"></script>
     <script type="module" src="app.js"></script>
     <script type="module" src="internal.js"></script>
