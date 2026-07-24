@@ -10,10 +10,10 @@ import {
     query,
     where,
     getDocs,
+    onSnapshot, // 🟢 Realtime sync-നായി ചേർത്തു
     serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-// 🔑 1. ഫയർബേസ് Auth ഇമ്പോർട്ട് ചെയ്യുന്നു
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
 const firebaseConfig = { 
@@ -27,21 +27,18 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
-const auth = getAuth(app); // 🔑 Auth ഇനീഷ്യലൈസ് ചെയ്യുന്നു
+const auth = getAuth(app);
 
-// 🔑 Secret Passcode for Music Upload
 const SECRET_PASSCODE = "2425";
-
-// 🔑 ലോഗിൻ ചെയ്ത യൂസറുടെ UID
 let currentUserId = null;
+let unsubscribeAccountListener = null; // Realtime Listener Unsubscribe ചെയ്യാൻ
 
-// 🚀 2. ഫയർബേസ് സെഷൻ വഴി Profile, Verified Badge, Followers/Following എന്നിവ ലോഡ് ചെയ്യുന്ന ഫങ്ഷൻ
+// 🚀 Settings Page Load
 async function loadUserSettings() {
     const usernameElement = document.getElementById("acc-username");
     const followersElem = document.getElementById("acc-followers");
     const followingElem = document.getElementById("acc-following");
 
-    // 1. LocalStorage ഡാറ്റ വെച്ച് UI അതിവേഗം ലോഡ് ആക്കുന്നു
     const cachedUser = localStorage.getItem("infinity_user") || localStorage.getItem("spy_active_user");
     let cachedUsername = localStorage.getItem("infinity_username");
 
@@ -56,7 +53,6 @@ async function loadUserSettings() {
         usernameElement.innerText = `@${cachedUsername}`;
     }
 
-    // 2. ഫയർബേസ് ഓതന്റിക്കേഷൻ സെഷൻ കൈകാര്യം ചെയ്യുന്നു
     onAuthStateChanged(auth, async (user) => {
         if (user) {
             currentUserId = user.uid;
@@ -69,25 +65,21 @@ async function loadUserSettings() {
 
                 if (docSnap.exists()) {
                     const data = docSnap.data();
-                    
                     currentUsername = data.username || user.displayName || cachedUsername || "";
 
                     if (currentUsername) {
                         localStorage.setItem("infinity_username", currentUsername);
                     }
 
-                    // 🔵 Blue Tick Badge HTML
                     const blueTickHTML = data.isVerified 
                         ? `<span title="Verified" style="color: #1DA1F2; margin-left: 4px; font-size: 0.9em;">☑️</span>` 
                         : "";
 
-                    // Username & Wins Display Update
                     if (usernameElement) {
                         const winsText = data.wins !== undefined ? ` • ${data.wins} Wins` : "";
                         usernameElement.innerHTML = `@${currentUsername}${blueTickHTML}${winsText}`;
                     }
 
-                    // 👥 Followers & Following Update (Array Length or Numeric Count)
                     const followersCount = Array.isArray(data.followers) 
                         ? data.followers.length 
                         : (data.followersCount || 0);
@@ -99,18 +91,7 @@ async function loadUserSettings() {
                     if (followersElem) followersElem.innerText = followersCount;
                     if (followingElem) followingElem.innerText = followingCount;
 
-                    // Settings Toggles Load
-                    if (data.settings) {
-                        if (document.getElementById("setting-mentions")) document.getElementById("setting-mentions").checked = data.settings.allowMentions || false;
-                        if (document.getElementById("setting-muted")) document.getElementById("setting-muted").checked = data.settings.isMuted || false;
-                        if (document.getElementById("setting-datasaver")) document.getElementById("setting-datasaver").checked = data.settings.dataSaver || false;
-                        if (document.getElementById("setting-family")) document.getElementById("setting-family").checked = data.settings.familyMode || false;
-                        if (document.getElementById("setting-messages") && data.settings.messages) {
-                            document.getElementById("setting-messages").value = data.settings.messages;
-                        }
-                    }
                 } else {
-                    // പുതിയ യൂസർ അക്കൗണ്ട് സെറ്റ് ചെയ്യുമ്പോൾ
                     currentUsername = user.displayName || cachedUsername || "";
 
                     if (currentUsername) {
@@ -119,34 +100,23 @@ async function loadUserSettings() {
 
                     await setDoc(userRef, {
                         username: currentUsername,
+                        name: user.displayName || "",
+                        email: user.email || "",
                         wins: 0,
+                        losses: 0,
                         bio: "",
                         isVerified: false,
                         followers: [],
                         following: [],
                         followersCount: 0,
-                        followingCount: 0,
-                        settings: {
-                            allowMentions: true,
-                            isMuted: false,
-                            dataSaver: false,
-                            familyMode: false,
-                            messages: "everyone"
-                        }
+                        followingCount: 0
                     });
-
-                    if (usernameElement) {
-                        usernameElement.innerText = currentUsername ? `@${currentUsername} • 0 Wins` : "0 Wins";
-                    }
-                    if (followersElem) followersElem.innerText = "0";
-                    if (followingElem) followingElem.innerText = "0";
                 }
 
-                // 🟢 Verification Badge Modal Status Update
                 await checkVerificationStatus();
 
             } catch (e) {
-                console.error("Error loading user profile:", e);
+                console.error("Error loading profile:", e);
             }
         } else {
             if (!cachedUsername && usernameElement) {
@@ -156,52 +126,61 @@ async function loadUserSettings() {
     });
 }
 
-window.updateSetting = async function(key, value) {
-    if (typeof window.toggleSetting === 'function') {
-        window.toggleSetting(key, value);
+// 💎 3. Realtime Account Center Modal
+window.openAccountCenter = function() {
+    if (!currentUserId) {
+        alert("Please log in to view account details.");
+        return;
     }
-};
 
-// 3. 💎 Account Center Pop-up Logic
-window.openAccountCenter = async function() {
-    if (!currentUserId) return;
-    try {
-        const userRef = doc(db, "users", currentUserId);
-        const docSnap = await getDoc(userRef);
+    const modal = document.getElementById("accountModal");
+    if (modal) modal.style.display = "flex";
+
+    const userRef = doc(db, "users", currentUserId);
+
+    // 🔥 Realtime Listener: ഫയർബേസിൽ മാറ്റം വന്നാൽ ഉടൻ UI മാറും
+    unsubscribeAccountListener = onSnapshot(userRef, (docSnap) => {
         if (docSnap.exists()) {
-            const d = docSnap.data();
-            if (document.getElementById("accUserId")) document.getElementById("accUserId").value = currentUserId;
-            if (document.getElementById("accDisplayUsername")) document.getElementById("accDisplayUsername").value = d.username || currentUserId;
-            if (document.getElementById("accBio")) document.getElementById("accBio").value = d.bio || "";
-            if (document.getElementById("accWins")) document.getElementById("accWins").value = d.wins || 0;
+            const data = docSnap.data();
+            const authUser = auth.currentUser;
+
+            if (document.getElementById("accUserId")) 
+                document.getElementById("accUserId").value = currentUserId;
             
-            const modal = document.getElementById("accountModal");
-            if (modal) modal.style.display = "flex";
+            if (document.getElementById("accName")) 
+                document.getElementById("accName").value = data.name || data.displayName || authUser?.displayName || "N/A";
+            
+            if (document.getElementById("accDisplayUsername")) 
+                document.getElementById("accDisplayUsername").value = data.username ? `@${data.username}` : "N/A";
+            
+            if (document.getElementById("accEmail")) 
+                document.getElementById("accEmail").value = data.email || authUser?.email || "N/A";
+            
+            if (document.getElementById("accWins")) 
+                document.getElementById("accWins").value = data.wins ?? 0;
+            
+            if (document.getElementById("accLosses")) 
+                document.getElementById("accLosses").value = data.losses ?? 0;
         }
-    } catch(e) {
-        console.error("Account Center Error:", e);
-    }
+    }, (error) => {
+        console.error("Account Center Realtime Error:", error);
+    });
 };
 
 window.closeAccountModal = function() {
     const modal = document.getElementById("accountModal");
     if (modal) modal.style.display = "none";
+
+    // വിൻഡോ ക്ലോസ് ചെയ്യുമ്പോൾ ബാക്ക്ഗ്രൗണ്ട് ലിസണർ ഓഫ് ആക്കുന്നു
+    if (unsubscribeAccountListener) {
+        unsubscribeAccountListener();
+        unsubscribeAccountListener = null;
+    }
 };
 
-window.saveAccountDetails = async function(event) {
-    event.preventDefault();
-    if (!currentUserId) return;
-    const bioElem = document.getElementById("accBio");
-    const bio = bioElem ? bioElem.value : "";
-    
-    try {
-        const userRef = doc(db, "users", currentUserId);
-        await updateDoc(userRef, { bio: bio });
-        alert("✅ Account details saved successfully!");
-        closeAccountModal();
-    } catch (e) {
-        console.error("Save error: ", e);
-        alert("❌ Failed to save changes.");
+window.updateSetting = async function(key, value) {
+    if (typeof window.toggleSetting === 'function') {
+        window.toggleSetting(key, value);
     }
 };
 
