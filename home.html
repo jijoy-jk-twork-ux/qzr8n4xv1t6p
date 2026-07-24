@@ -23,6 +23,17 @@
     <!-- Main Content (Feed) -->
     <!-- ഫയർബേസിൽ നിന്നുള്ള പോസ്റ്റുകൾ ഓട്ടോമാറ്റിക് ആയി ഇതിന്റെ ഉള്ളിലേക്കാണ് വരിക -->
     <main class="feed-container">
+        <!-- 🟦 Square Stories Section -->
+<div class="stories-wrapper" id="stories-container">
+    <!-- യൂസറുടെ സ്വന്തം സ്റ്റോറി ആഡ് ചെയ്യാനുള്ള ബട്ടൺ (Your Story) -->
+    <div class="story-square-card my-story-card" onclick="window.location.href='create-story.html'">
+        <i class="fa-solid fa-plus add-icon"></i>
+        <span class="story-username-tag my-story-tag">Your Story</span>
+    </div>
+    
+    <!-- ബാക്കി യൂസർമാരുടെ സ്റ്റോറികൾ JS വഴി ഓട്ടോമാറ്റിക് ആയി ഇതിലേക്ക് ലോഡ് ആകും -->
+</div>
+
         
         <!-- ഡാറ്റാബേസ് കണക്ട് ആകുന്നതുവരെ കാണിക്കാൻ ഒരു ചെറിയ ലോഡിംഗ് മെസ്സേജ് -->
         <p style="text-align:center; padding:20px; color:#888;">Loading posts...</p>
