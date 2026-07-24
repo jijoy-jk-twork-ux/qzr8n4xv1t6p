@@ -35,11 +35,13 @@ const SECRET_PASSCODE = "2425";
 // 🔑 ലോഗിൻ ചെയ്ത യൂസറുടെ UID
 let currentUserId = null;
 
-// 🚀 2. ഫയർബേസ് സെഷൻ വഴി Username-ഉം Verification Status-ഉം കൃത്യമായി ലോഡ് ചെയ്യുന്ന ഫങ്ഷൻ
+// 🚀 2. ഫയർബേസ് സെഷൻ വഴി Profile, Verified Badge, Followers/Following എന്നിവ ലോഡ് ചെയ്യുന്ന ഫങ്ഷൻ
 async function loadUserSettings() {
     const usernameElement = document.getElementById("acc-username");
+    const followersElem = document.getElementById("acc-followers");
+    const followingElem = document.getElementById("acc-following");
 
-    // 1. LocalStorage ഡാറ്റ വെച്ച് UI അതിവേഗം ലോഡ് ആക്കുന്നു (Fast UI Render)
+    // 1. LocalStorage ഡാറ്റ വെച്ച് UI അതിവേഗം ലോഡ് ആക്കുന്നു
     const cachedUser = localStorage.getItem("infinity_user") || localStorage.getItem("spy_active_user");
     let cachedUsername = localStorage.getItem("infinity_username");
 
@@ -60,7 +62,6 @@ async function loadUserSettings() {
             currentUserId = user.uid;
 
             try {
-                // 'users' കളക്ഷനിൽ നിന്ന് UID വെച്ച് ഡാറ്റ എടുക്കുന്നു
                 const userRef = doc(db, "users", currentUserId);
                 const docSnap = await getDoc(userRef);
 
@@ -71,17 +72,32 @@ async function loadUserSettings() {
                     
                     currentUsername = data.username || user.displayName || cachedUsername || "";
 
-                    // LocalStorage പെട്ടെന്ന് അപ്ഡേറ്റ് ചെയ്യുന്നു
                     if (currentUsername) {
                         localStorage.setItem("infinity_username", currentUsername);
                     }
 
-                    // Banner Update (@username • Wins)
+                    // 🔵 Blue Tick Badge HTML
+                    const blueTickHTML = data.isVerified 
+                        ? `<span title="Verified" style="color: #1DA1F2; margin-left: 4px; font-size: 0.9em;">☑️</span>` 
+                        : "";
+
+                    // Username & Wins Display Update
                     if (usernameElement) {
-                        usernameElement.innerText = currentUsername 
-                            ? `@${currentUsername} • ${data.wins || 0} Wins` 
-                            : `${data.wins || 0} Wins`;
+                        const winsText = data.wins !== undefined ? ` • ${data.wins} Wins` : "";
+                        usernameElement.innerHTML = `@${currentUsername}${blueTickHTML}${winsText}`;
                     }
+
+                    // 👥 Followers & Following Update (Array Length or Numeric Count)
+                    const followersCount = Array.isArray(data.followers) 
+                        ? data.followers.length 
+                        : (data.followersCount || 0);
+
+                    const followingCount = Array.isArray(data.following) 
+                        ? data.following.length 
+                        : (data.followingCount || 0);
+
+                    if (followersElem) followersElem.innerText = followersCount;
+                    if (followingElem) followingElem.innerText = followingCount;
 
                     // Settings Toggles Load
                     if (data.settings) {
@@ -94,7 +110,7 @@ async function loadUserSettings() {
                         }
                     }
                 } else {
-                    // പുതിയ യൂസർ അക്കൗണ്ട് ഉണ്ടാക്കുമ്പോൾ
+                    // പുതിയ യൂസർ അക്കൗണ്ട് സെറ്റ് ചെയ്യുമ്പോൾ
                     currentUsername = user.displayName || cachedUsername || "";
 
                     if (currentUsername) {
@@ -106,6 +122,10 @@ async function loadUserSettings() {
                         wins: 0,
                         bio: "",
                         isVerified: false,
+                        followers: [],
+                        following: [],
+                        followersCount: 0,
+                        followingCount: 0,
                         settings: {
                             allowMentions: true,
                             isMuted: false,
@@ -118,16 +138,17 @@ async function loadUserSettings() {
                     if (usernameElement) {
                         usernameElement.innerText = currentUsername ? `@${currentUsername} • 0 Wins` : "0 Wins";
                     }
+                    if (followersElem) followersElem.innerText = "0";
+                    if (followingElem) followingElem.innerText = "0";
                 }
 
-                // 🟢 Verification Status പരിശോധിക്കുന്നു
+                // 🟢 Verification Badge Modal Status Update
                 await checkVerificationStatus();
 
             } catch (e) {
                 console.error("Error loading user profile:", e);
             }
         } else {
-            // ശരിക്കും ലോഗൗട്ട് ആയ അവസ്ഥയിൽ മാത്രം Guest User എന്ന് കാണിക്കുന്നു
             if (!cachedUsername && usernameElement) {
                 usernameElement.innerText = "Guest User";
             }
@@ -206,7 +227,7 @@ window.closeBadgeModal = function() {
     if (badgeModal) badgeModal.style.display = "none";
 };
 
-// 🟢 Verification Status Check Logic (Fixed)
+// 🟢 Verification Status Check Logic
 async function checkVerificationStatus() {
     const statusTag = document.getElementById("badge-status-tag");
     const submitBtn = document.getElementById("submitBtn");
@@ -217,7 +238,7 @@ async function checkVerificationStatus() {
         const userDocRef = doc(db, "users", currentUserId);
         const userDocSnap = await getDoc(userDocRef);
 
-        // 🟢 1. അക്കൗണ്ട് വെരിഫൈഡ് ആണെങ്കിൽ (Green Badge)
+        // 🟢 1. അക്കൗണ്ട് വെരിഫൈഡ് ആണെങ്കിൽ
         if (userDocSnap.exists() && userDocSnap.data().isVerified === true) {
             if (statusTag) {
                 statusTag.innerText = "✓ Verified Creator";
@@ -230,7 +251,7 @@ async function checkVerificationStatus() {
             return;
         }
 
-        // 🟠 2. അപേക്ഷ സമർപ്പിച്ച് റിവ്യൂവിൽ ആണെങ്കിൽ (Orange Badge)
+        // 🟠 2. അപേക്ഷ സമർപ്പിച്ച് റിവ്യൂവിൽ ആണെങ്കിൽ
         const q = query(
             collection(db, "verification_requests"), 
             where("userId", "==", currentUserId)
@@ -247,7 +268,7 @@ async function checkVerificationStatus() {
                 submitBtn.disabled = true;
             }
         } else {
-            // 🔴 3. വെരിഫൈഡ് അല്ല / അപേക്ഷിച്ചിട്ടില്ല (Red Badge)
+            // 🔴 3. വെരിഫൈഡ് അല്ല
             if (statusTag) {
                 statusTag.innerText = "✖ Not Verified";
                 statusTag.className = "status-badge status-not-verified";
