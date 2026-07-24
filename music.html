@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spymo - Music Library</title>
+    <link rel="stylesheet" href="music.css">
+</head>
+<body>
+
+    <div class="music-container">
+        <h2>🎵 Spymo Audio Vault</h2>
+        <p class="subtitle">Select audio to stream or use in your stories</p>
+
+        <!-- 🎶 Unlimited Music List -->
+        <div class="music-list" id="music-list">
+            <p class="loading-text">Loading tracks...</p>
+        </div>
+    </div>
+
+    <!-- 🎧 Audio Player Pop-up Modal -->
+    <div class="music-modal" id="music-modal">
+        <div class="modal-card">
+            <span class="close-btn" onclick="closePlayer()">&times;</span>
+            
+            <!-- Music Logo / Cover -->
+            <div class="album-art" id="modal-art">
+                🎵
+            </div>
+
+            <h3 id="modal-title">Track Name</h3>
+            <p id="modal-artist">Artist Name</p>
+
+            <!-- Custom Seekbar & Duration -->
+            <div class="audio-controls">
+                <span id="current-time">0:00</span>
+                <input type="range" id="seek-bar" value="0" max="100">
+                <span id="duration-time">0:00</span>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="player-buttons">
+                <button class="play-btn" id="play-pause-btn" onclick="togglePlay()">▶ Play</button>
+                <button class="story-btn" id="add-story-btn" onclick="addToStoryDraft()">📸 Add to Story</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Audio Element (Hidden) -->
+    <audio id="global-audio-player"></audio>
+
+    <script type="module" src="music.js"></script>
+</body>
+</html>
