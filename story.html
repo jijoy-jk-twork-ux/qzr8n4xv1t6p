@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create Story - Spymo</title>
+    <link rel="stylesheet" href="story.css">
+</head>
+<body>
+
+    <div class="story-editor-container">
+        <!-- Top Bar -->
+        <div class="editor-header">
+            <button onclick="window.history.back()" class="icon-btn">✕</button>
+            <h3>New Story</h3>
+            <button id="upload-story-btn" onclick="publishStory()" class="post-btn">Share</button>
+        </div>
+
+<!-- Main Preview Area -->
+<div class="preview-area" id="preview-box">
+    <!-- Direct Label Trigger for Gallery -->
+    <label for="file-input" style="width:100%; height:100%; display:flex; justify-content:center; align-items:center; cursor:pointer;">
+        <!-- Selected Image Preview -->
+        <img id="story-img-preview" src="" alt="Story Preview" style="display: none; width: 100%; height: 100%; object-fit: cover;">
+        
+        <!-- Default Placeholder -->
+        <div id="upload-placeholder">
+            <span class="upload-icon">📷</span>
+            <p>Tap to Select Image</p>
+            <small>PNG, JPG, JPEG, WEBP supported</small>
+        </div>
+    </label>
+
+    <!-- Attached Music Badge overlay -->
+    <div id="attached-music-sticker" class="music-sticker" style="display: none;">
+        <span class="music-icon">🎵</span>
+        <marquee id="sticker-text">Song Title - Artist</marquee>
+        <button onclick="removeAttachedMusic(event)" class="remove-music-btn">✕</button>
+    </div>
+</div>
+
+<!-- Hidden File Input -->
+<input type="file" id="file-input" accept="image/png, image/jpeg, image/jpg, image/webp" style="display: none;">
+
+<!-- Bottom Controls Bar -->
+<div class="editor-tools">
+    <label for="file-input" class="tool-item">
+        <span>🖼️ Image</span>
+    </label>
+    
+    <div class="tool-item" onclick="openMusicPicker()">
+        <span>🎵 Music</span>
+    </div>
+
+    <div class="tool-item" onclick="focusCaption()">
+        <span>✏️ Caption</span>
+    </div>
+</div>
+
+
+        <!-- Caption Input Box -->
+        <div class="caption-input-group">
+            <input type="text" id="story-caption" placeholder="Write a caption..." maxlength="150">
+        </div>
+    </div>
+
+    <script type="module" src="story.js"></script>
+</body>
+</html>
