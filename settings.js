@@ -36,10 +36,21 @@ const SECRET_PASSCODE = "2425";
 let currentUserId = null;
 // 1. യൂസറുടെ വിവരങ്ങൾ കൃത്യമായി ലോഡ് ചെയ്യുന്ന ഫങ്ഷൻ
 async function loadUserSettings() {
+    const usernameElement = document.getElementById("acc-username");
+
+    // ⚡ 1. FAST STEP: LocalStorage-ൽ ഉള്ള 'infinity_username' ആദ്യം എടുക്കുന്നു
+    const localUsername = localStorage.getItem("infinity_username");
+
+    if (localUsername && usernameElement) {
+        // ഫയർബേസിൽ നിന്ന് ഡാറ്റ വരുന്നത് വരെ സ്ക്രീനിൽ ഉടൻ Username കാണിക്കും!
+        usernameElement.innerText = `@${localUsername}`;
+    }
+
+    // 🚀 2. SECOND STEP: ഫയർബേസ് Auth വഴി ശരിയായ User ID വെച്ച് ഡാറ്റ എടുക്കുന്നു
     onAuthStateChanged(auth, async (user) => {
-        // 🔒 ലോഗിൻ ചെയ്ത യൂസർ ഇല്ലെങ്കിൽ പ്രോസസ്സ് നിർത്തുന്നു
         if (!user) {
-            console.log("No authenticated user found.");
+            console.log("No user logged in");
+            if (usernameElement) usernameElement.innerText = "Guest";
             return;
         }
 
@@ -53,16 +64,20 @@ async function loadUserSettings() {
 
             if (docSnap.exists()) {
                 const data = docSnap.data();
-                // 1. ഫയർബേസ് ഡാറ്റാബേസിലെ Username, ഇല്ലെങ്കിൽ Auth DisplayName
-                username = data.username || user.displayName || "";
+                // Firestore-ലെ പേര്, അല്ലെങ്കിൽ Auth DisplayName, അല്ലെങ്കിൽ localUsername
+                username = data.username || user.displayName || localUsername || "";
 
-                // Account Center Banner Update (Username ഉണ്ടെങ്കിൽ മാത്രം കാണിക്കും)
-                const usernameElement = document.getElementById("acc-username");
+                // 💾 'infinity_username' ആയി LocalStorage-ൽ അപ്ഡേറ്റ് ചെയ്യുന്നു
+                if (username) {
+                    localStorage.setItem("infinity_username", username);
+                }
+
+                // UI ബാന്നർ അപ്ഡേറ്റ് ചെയ്യുന്നു
                 if (usernameElement) {
                     usernameElement.innerText = username ? `@${username} • ${data.wins || 0} Wins` : `${data.wins || 0} Wins`;
                 }
 
-                // Toggles load
+                // Settings Toggles Load
                 if (data.settings) {
                     if (document.getElementById("setting-mentions")) document.getElementById("setting-mentions").checked = data.settings.allowMentions || false;
                     if (document.getElementById("setting-muted")) document.getElementById("setting-muted").checked = data.settings.isMuted || false;
@@ -73,11 +88,15 @@ async function loadUserSettings() {
                     }
                 }
             } else {
-                // 🟢 പുതിയ യൂസർ ആണെങ്കിൽ റാൻഡം നെയിം ഉണ്ടാക്കില്ല. ലോഗിൻ ചെയ്ത പേര് ഉണ്ടെങ്കിൽ മാത്രം എടുക്കും.
-                username = user.displayName || "";
+                // പുതിയ അക്കൗണ്ട് ആണെങ്കിൽ (Username മാത്രം എടുക്കും, random ഉണ്ടാക്കില്ല)
+                username = user.displayName || localUsername || "";
+
+                if (username) {
+                    localStorage.setItem("infinity_username", username);
+                }
 
                 await setDoc(userRef, {
-                    username: username, // ലോഗിൻ പേര് മാത്രം (ഇല്ലെങ്കിൽ Blank ആയിരിക്കും)
+                    username: username,
                     wins: 0,
                     bio: "",
                     isVerified: false,
@@ -90,33 +109,20 @@ async function loadUserSettings() {
                     }
                 });
 
-                const usernameElement = document.getElementById("acc-username");
                 if (usernameElement) {
                     usernameElement.innerText = username ? `@${username} • 0 Wins` : "0 Wins";
                 }
             }
 
-            // 🟢 വെരിഫിക്കേഷൻ സ്റ്റാറ്റസ് ചെക്ക് ചെയ്യുന്നു
+            // Verification Status ചെക്ക് ചെയ്യുന്നു
             await checkVerificationStatus();
 
         } catch (e) {
-            console.error("Error loading settings:", e);
+            console.error("Error fetching user data:", e);
         }
     });
 }
 
-// 2. സെറ്റിംഗ്സ് ടോഗിളുകൾ ഫയർബേസിലേക്ക് ഓട്ടോ-സേവ് ചെയ്യുന്നു
-window.toggleSetting = async function(key, value) {
-    if (!currentUserId) return;
-    try {
-        const userRef = doc(db, "users", currentUserId);
-        await updateDoc(userRef, {
-            [`settings.${key}`]: value
-        });
-    } catch (e) {
-        console.error("Error updating setting: ", e);
-    }
-};
 
 window.updateSetting = async function(key, value) {
     window.toggleSetting(key, value);
