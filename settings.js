@@ -126,8 +126,22 @@ async function loadUserSettings() {
     });
 }
 
-// 💎 3. Realtime Account Center Modal
+// 💎 3. Realtime Account Center Modal (Updated with Spy Fallback)
 window.openAccountCenter = function() {
+    // 1. Firebase Auth-ൽ നിന്ന് ID കിട്ടിയില്ലെങ്കിൽ LocalStorage (Spy System)-ൽ നിന്ന് എടുക്കുന്നു
+    if (!currentUserId) {
+        const cachedUser = localStorage.getItem("infinity_user") || localStorage.getItem("spy_active_user");
+        if (cachedUser) {
+            try {
+                const parsed = JSON.parse(cachedUser);
+                currentUserId = parsed.uid || parsed.id;
+            } catch (e) {
+                console.error("Local storage parse error", e);
+            }
+        }
+    }
+
+    // 2. അപ്പോഴും User ID ഇല്ലെങ്കിൽ മാത്രം Alert കാണിക്കുന്നു
     if (!currentUserId) {
         alert("Please log in to view account details.");
         return;
@@ -166,6 +180,7 @@ window.openAccountCenter = function() {
         console.error("Account Center Realtime Error:", error);
     });
 };
+
 
 window.closeAccountModal = function() {
     const modal = document.getElementById("accountModal");
