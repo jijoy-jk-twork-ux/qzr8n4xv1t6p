@@ -564,3 +564,93 @@ body {
 .delete-icon:hover {
     transform: scale(1.1);
 }
+/* ==========================================
+   Square Stories Carousel Styling
+   ========================================== */
+
+/* സ്റ്റോറി കണ്ടെയ്നർ (Horizontal Scroll) */
+.stories-wrapper {
+    display: flex;
+    gap: 12px;
+    padding: 12px 15px;
+    overflow-x: auto;
+    white-space: nowrap;
+    background-color: #ffffff;
+    border-bottom: 1px solid #dbdbdb;
+    scrollbar-width: none; /* Firefox-ൽ സ്ക്രോൾബാർ മറയ്ക്കാൻ */
+}
+
+/* Chrome, Safari ബ്രൗസറുകളിൽ സ്ക്രോൾബാർ മറയ്ക്കാൻ */
+.stories-wrapper::-webkit-scrollbar {
+    display: none;
+}
+
+/* ചതുരാകൃതിയിലുള്ള ഓരോ സ്റ്റോറി ബോക്സും (Square Box) */
+.story-square-card {
+    min-width: 80px;
+    height: 95px;
+    background-color: #f0f0f0;
+    border-radius: 12px; /* മൂലകൾ ചെറിയ വട്ടത്തിൽ */
+    position: relative;
+    flex-shrink: 0;
+    cursor: pointer;
+    overflow: hidden;
+    border: 2px solid #e0e0e0;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+    transition: transform 0.2s ease;
+}
+
+.story-square-card:active {
+    transform: scale(0.96);
+}
+
+/* യൂസറുടെ സ്വന്തം 'Add Story' കാർഡ് */
+.my-story-card {
+    border: 2px dashed #0095f6;
+    background-color: #f7f9fa;
+}
+
+/* സ്റ്റോറി ചിത്രങ്ങൾ */
+.story-square-card img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* 'Your Story' പ്ലസ് ഐക്കൺ */
+.story-square-card .add-icon {
+    position: absolute;
+    top: 40%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 22px;
+    color: #0095f6;
+}
+
+/* യൂസർപേര് കാണിക്കുന്ന ടാഗ് */
+.story-username-tag {
+    position: absolute;
+    bottom: 4px;
+    left: 4px;
+    right: 4px;
+    font-size: 10px;
+    color: #ffffff;
+    background: rgba(0, 0, 0, 0.65);
+    padding: 2px 4px;
+    border-radius: 4px;
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.my-story-tag {
+    background: transparent !important;
+    color: #333333 !important;
+    font-weight: bold;
+}
+
+/* പുതിയ സ്റ്റോറികൾ ഉണ്ടാകുമ്പോൾ വരുന്ന ബോർഡർ കളർ */
+.has-active-story {
+    border: 2px solid #ff2b56;
+}
