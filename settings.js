@@ -13,6 +13,9 @@ import {
     serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
+// 🔑 1. ഫയർബേസ് Auth ഇമ്പോർട്ട് ചെയ്യുന്നു
+import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+
 const firebaseConfig = { 
     apiKey: "AIzaSyCNQaHi-L3fninLxkePZBaNR7vu6JiYEwQ",
     authDomain: "infinityspotx.firebaseapp.com",
@@ -24,65 +27,72 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
+const auth = getAuth(app); // 🔑 Auth ഇനീഷ്യലൈസ് ചെയ്യുന്നു
 
 // 🔑 Secret Passcode for Music Upload
 const SECRET_PASSCODE = "2425";
 
-let currentUserId = localStorage.getItem("userUid");
-if (!currentUserId) {
-    currentUserId = "USER_" + Math.floor(Math.random() * 10000);
-    localStorage.setItem("userUid", currentUserId);
-}
+// 🔑 Random ID ഉണ്ടാക്കുന്നത് മാറ്റി, ലോഗിൻ ചെയ്ത യൂസറുടെ UID പിന്നീട് ലഭിക്കാനായി null ആക്കി
+let currentUserId = null;
 
 // 1. ഫയർബേസിൽ നിന്ന് യൂസറുടെ സെറ്റിംഗ്സ് ഡാറ്റ ലോഡ് ചെയ്യുന്നു
 async function loadUserSettings() {
-    try {
-        const userRef = doc(db, "users", currentUserId);
-        const docSnap = await getDoc(userRef);
+    // 🔑 ഫയർബേസിലെ യഥാർത്ഥ UID ലഭിക്കാൻ ഓതന്റിക്കേഷൻ സ്റ്റേറ്റ് ചെക്ക് ചെയ്യുന്നു
+    onAuthStateChanged(auth, async (user) => {
+        if (user) {
+            currentUserId = user.uid; // യഥാർത്ഥ ലോഗിൻ UID സെറ്റ് ചെയ്യുന്നു
 
-        if (docSnap.exists()) {
-            const data = docSnap.data();
-            
-            // Account Center Banner Update
-            document.getElementById("acc-username").innerText = `@${data.username || currentUserId} • ${data.wins || 0} Wins`;
+            try {
+                const userRef = doc(db, "users", currentUserId);
+                const docSnap = await getDoc(userRef);
 
-            // Toggles load
-            if (data.settings) {
-                document.getElementById("setting-mentions").checked = data.settings.allowMentions || false;
-                document.getElementById("setting-muted").checked = data.settings.isMuted || false;
-                document.getElementById("setting-datasaver").checked = data.settings.dataSaver || false;
-                document.getElementById("setting-family").checked = data.settings.familyMode || false;
-                if (data.settings.messages) {
-                    document.getElementById("setting-messages").value = data.settings.messages;
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    
+                    // Account Center Banner Update
+                    document.getElementById("acc-username").innerText = `@${data.username || currentUserId} • ${data.wins || 0} Wins`;
+
+                    // Toggles load
+                    if (data.settings) {
+                        document.getElementById("setting-mentions").checked = data.settings.allowMentions || false;
+                        document.getElementById("setting-muted").checked = data.settings.isMuted || false;
+                        document.getElementById("setting-datasaver").checked = data.settings.dataSaver || false;
+                        document.getElementById("setting-family").checked = data.settings.familyMode || false;
+                        if (data.settings.messages) {
+                            document.getElementById("setting-messages").value = data.settings.messages;
+                        }
+                    }
+                } else {
+                    await setDoc(userRef, {
+                        username: "User_" + Math.floor(Math.random() * 1000),
+                        wins: 0,
+                        bio: "",
+                        isVerified: false,
+                        settings: {
+                            allowMentions: true,
+                            isMuted: false,
+                            dataSaver: false,
+                            familyMode: false,
+                            messages: "everyone"
+                        }
+                    });
                 }
+
+                // 🟢 യഥാർത്ഥ UID ലഭിച്ചതിന് ശേഷം വെരിഫിക്കേഷൻ സ്റ്റാറ്റസ് ഓട്ടോമാറ്റിക്കായി ചെക്ക് ചെയ്യുന്നു
+                await checkVerificationStatus();
+
+            } catch (e) {
+                console.error("Error loading settings:", e);
             }
         } else {
-            await setDoc(userRef, {
-                username: "User_" + Math.floor(Math.random() * 1000),
-                wins: 0,
-                bio: "",
-                isVerified: false, // Default status
-                settings: {
-                    allowMentions: true,
-                    isMuted: false,
-                    dataSaver: false,
-                    familyMode: false,
-                    messages: "everyone"
-                }
-            });
-            loadUserSettings();
+            console.log("User is not logged in!");
         }
-
-        // 🟢 പേജ് ലോഡ് ചെയ്യുമ്പോൾ തന്നെ വെരിഫിക്കേഷൻ സ്റ്റാറ്റസ് ഓട്ടോമാറ്റിക്കായി ചെക്ക് ചെയ്യുന്നു
-        await checkVerificationStatus();
-
-    } catch (e) {
-        console.error("Error loading settings:", e);
-    }
+    });
 }
 
 // 2. സെറ്റിംഗ്സ് ടോഗിളുകൾ ഫയർബേസിലേക്ക് ഓട്ടോ-സേവ് ചെയ്യുന്നു
 window.toggleSetting = async function(key, value) {
+    if (!currentUserId) return;
     try {
         const userRef = doc(db, "users", currentUserId);
         await updateDoc(userRef, {
@@ -99,6 +109,7 @@ window.updateSetting = async function(key, value) {
 
 // 3. 💎 Account Center Pop-up Logic
 window.openAccountCenter = async function() {
+    if (!currentUserId) return;
     const userRef = doc(db, "users", currentUserId);
     const docSnap = await getDoc(userRef);
     if (docSnap.exists()) {
@@ -118,6 +129,7 @@ window.closeAccountModal = function() {
 
 window.saveAccountDetails = async function(event) {
     event.preventDefault();
+    if (!currentUserId) return;
     const bio = document.getElementById("accBio").value;
     
     try {
@@ -133,6 +145,7 @@ window.saveAccountDetails = async function(event) {
 
 // 4. Follow & Invite Link Share
 window.shareInviteLink = function() {
+    if (!currentUserId) return;
     const inviteUrl = `https://spymo.app/invite?ref=${currentUserId}`;
     navigator.clipboard.writeText(inviteUrl);
     alert("🔗 Spymo Invite Link copied to clipboard!\n" + inviteUrl);
@@ -154,7 +167,7 @@ async function checkVerificationStatus() {
     const statusTag = document.getElementById("badge-status-tag");
     const submitBtn = document.getElementById("submitBtn");
 
-    if (!statusTag) return;
+    if (!statusTag || !currentUserId) return;
 
     try {
         const userDocRef = doc(db, "users", currentUserId);
@@ -172,7 +185,6 @@ async function checkVerificationStatus() {
         }
 
         // 🟠 2. അപേക്ഷ സമർപ്പിച്ച് റിവ്യൂവിൽ ആണെങ്കിൽ (Orange Badge)
-        // 💡 കളക്ഷൻ പേര് 'verification_requests' എന്ന് കൃത്യമാക്കി
         const q = query(
             collection(db, "verification_requests"), 
             where("userId", "==", currentUserId)
@@ -203,6 +215,7 @@ async function checkVerificationStatus() {
 
 window.submitBadgeApplication = async function(event) {
     event.preventDefault();
+    if (!currentUserId) return;
 
     const submitBtn = document.getElementById("submitBtn");
     submitBtn.innerText = "Submitting...";
@@ -221,7 +234,6 @@ window.submitBadgeApplication = async function(event) {
     };
 
     try {
-        // 💡 തിരുത്തിയത്: verification_requests എന്ന ഒരൊറ്റ കളക്ഷൻ നെയിം ഉപയോഗിച്ചു
         await addDoc(collection(db, "verification_requests"), payload);
 
         if (GOOGLE_SCRIPT_URL) {
@@ -235,7 +247,7 @@ window.submitBadgeApplication = async function(event) {
 
         alert("🎉 Creator Badge Application Submitted Successfully!");
         document.getElementById("badgeForm").reset();
-        await checkVerificationStatus(); // UI മാറ്റി അപ്‌ഡേറ്റ് ചെയ്യും
+        await checkVerificationStatus();
         closeBadgeModal();
 
     } catch (error) {
@@ -306,6 +318,7 @@ window.uploadMusicToFirestore = async function(event) {
 
 // 7. Report Issue
 window.reportIssue = async function() {
+    if (!currentUserId) return;
     const issue = prompt("Describe the bug or problem you are facing:");
     if (issue) {
         await addDoc(collection(db, "reports"), {
