@@ -1,0 +1,271 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap');
+
+body {
+    background-color: #080808;
+    color: #ffffff;
+    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+    margin: 0;
+    padding: 20px 15px;
+    -webkit-font-smoothing: antialiased;
+}
+
+.music-container {
+    max-width: 420px;
+    margin: 0 auto;
+}
+
+h2 {
+    font-size: 24px;
+    font-weight: 800;
+    background: linear-gradient(135deg, #ff1744 0%, #ff5252 50%, #ff79b0 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin: 0 0 4px 0;
+    letter-spacing: -0.5px;
+}
+
+.subtitle {
+    color: #808080;
+    font-size: 13px;
+    margin-bottom: 25px;
+    font-weight: 500;
+}
+
+/* 🎶 Premium Music List Styling */
+.music-list {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.music-card {
+    background: linear-gradient(145deg, #141414 0%, #0d0d0d 100%);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 16px;
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+}
+
+.music-card:hover {
+    border-color: rgba(255, 23, 68, 0.4);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(255, 23, 68, 0.15);
+}
+
+.music-card:active {
+    transform: scale(0.97);
+}
+
+.track-info {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.track-logo {
+    width: 50px;
+    height: 50px;
+    border-radius: 12px;
+    object-fit: cover;
+    background: #1a1a1a;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+}
+
+.track-details h4 {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 700;
+    color: #f5f5f5;
+    letter-spacing: -0.2px;
+}
+
+.track-details p {
+    margin: 4px 0 0 0;
+    font-size: 12px;
+    color: #888888;
+    font-weight: 500;
+}
+
+.play-icon-badge {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: rgba(255, 23, 68, 0.1);
+    border: 1px solid rgba(255, 23, 68, 0.3);
+    color: #ff1744;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    transition: 0.3s;
+}
+
+.music-card:hover .play-icon-badge {
+    background: #ff1744;
+    color: #ffffff;
+    box-shadow: 0 0 12px rgba(255, 23, 68, 0.6);
+}
+
+/* 🎧 Glassmorphic Glass-Effect Pop-up Player Modal */
+.music-modal {
+    display: none;
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: rgba(0, 0, 0, 0.75);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    z-index: 1000;
+    justify-content: center;
+    align-items: center;
+}
+
+.modal-card {
+    background: linear-gradient(180deg, rgba(30, 30, 30, 0.8) 0%, rgba(15, 15, 15, 0.95) 100%);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 28px;
+    width: 85%;
+    max-width: 330px;
+    padding: 28px 22px 24px 22px;
+    text-align: center;
+    position: relative;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8), 0 0 30px rgba(255, 23, 68, 0.15);
+    animation: modalPop 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes modalPop {
+    from { opacity: 0; transform: scale(0.85); }
+    to { opacity: 1; transform: scale(1); }
+}
+
+.close-btn {
+    position: absolute;
+    right: 20px; top: 16px;
+    font-size: 20px;
+    color: #888;
+    cursor: pointer;
+    width: 30px; height: 30px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: 0.2s;
+}
+
+.close-btn:hover {
+    background: rgba(255, 255, 255, 0.15);
+    color: #fff;
+}
+
+.album-art {
+    width: 150px;
+    height: 150px;
+    margin: 10px auto 18px;
+    border-radius: 20px;
+    background: #1a1a1a;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 60px;
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.6), 0 0 20px rgba(255, 23, 68, 0.25);
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.album-art img {
+    width: 100%; height: 100%;
+    object-fit: cover;
+}
+
+#modal-title {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 700;
+    color: #fff;
+    letter-spacing: -0.3px;
+}
+
+#modal-artist {
+    margin: 4px 0 15px 0;
+    font-size: 13px;
+    color: #999;
+    font-weight: 500;
+}
+
+/* Custom Sleek Audio Seek Bar */
+.audio-controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 18px 0 22px 0;
+    font-size: 11px;
+    color: #777;
+    font-weight: 600;
+}
+
+#seek-bar {
+    flex: 1;
+    height: 4px;
+    border-radius: 10px;
+    accent-color: #ff1744;
+    background: rgba(255, 255, 255, 0.1);
+    cursor: pointer;
+}
+
+/* Premium Buttons Styling */
+.player-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.play-btn {
+    background: linear-gradient(135deg, #ff1744 0%, #d50000 100%);
+    color: #fff;
+    border: none;
+    padding: 13px;
+    border-radius: 30px;
+    font-weight: 700;
+    font-size: 14px;
+    cursor: pointer;
+    box-shadow: 0 6px 20px rgba(255, 23, 68, 0.4);
+    transition: 0.2s;
+    letter-spacing: 0.3px;
+}
+
+.play-btn:active {
+    transform: scale(0.96);
+    box-shadow: 0 3px 10px rgba(255, 23, 68, 0.3);
+}
+
+.story-btn {
+    background: rgba(255, 255, 255, 0.05);
+    color: #eee;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    padding: 11px;
+    border-radius: 30px;
+    font-weight: 600;
+    font-size: 13px;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+.story-btn:hover {
+    background: rgba(255, 255, 255, 0.12);
+    border-color: rgba(255, 255, 255, 0.3);
+}
+
+.story-btn:active {
+    transform: scale(0.96);
+}
