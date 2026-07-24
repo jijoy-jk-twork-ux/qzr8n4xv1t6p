@@ -17,7 +17,7 @@ const db = getFirestore(app);
 const CLOUD_NAME = "d7b90apq";
 const UPLOAD_PRESET = "spymo_story";
 
-// 🔗 നിങ്ങളുടെ Google Apps Script URL ഇവിടെ നൽകിയിരിക്കുന്നു
+// 🔗 Google Apps Script Auto-cleanup Trigger URL
 const CLEANUP_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz1c3B4rTm9RX2IOtSKeMp2Ypg43BH4YJli_sFkkdYF-2VPaAdumk3ndUleK2vGbLcL/exec";
 
 let attachedMusic = null;
@@ -158,8 +158,10 @@ window.publishStory = async function() {
     }
 
     const shareBtn = document.getElementById("upload-story-btn");
-    shareBtn.innerText = "Sharing...";
-    shareBtn.disabled = true;
+    if (shareBtn) {
+        shareBtn.innerText = "Sharing...";
+        shareBtn.disabled = true;
+    }
 
     try {
         const formData = new FormData();
@@ -195,13 +197,17 @@ window.publishStory = async function() {
         localStorage.removeItem("selected_story_music");
 
         alert("🎉 Story shared successfully!");
-        window.location.href = "index.html";
+        
+        // 🔄 `home.html` പേജിലേക്ക് റീഡയറക്ട് ചെയ്യുന്നു
+        window.location.href = "home.html";
 
     } catch (err) {
         console.error("Story Publish Error:", err);
         alert("Failed to share story. Try again!");
     } finally {
-        shareBtn.innerText = "Share";
-        shareBtn.disabled = false;
+        if (shareBtn) {
+            shareBtn.innerText = "Share";
+            shareBtn.disabled = false;
+        }
     }
 };
