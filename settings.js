@@ -32,25 +32,35 @@ const auth = getAuth(app); // 🔑 Auth ഇനീഷ്യലൈസ് ചെയ
 // 🔑 Secret Passcode for Music Upload
 const SECRET_PASSCODE = "2425";
 
-// 🔑 Random ID ഉണ്ടാക്കുന്നത് മാറ്റി, ലോഗിൻ ചെയ്ത യൂസറുടെ UID പിന്നീട് ലഭിക്കാനായി null ആക്കി
+// 🔑 ലോഗിൻ ചെയ്ത യൂസറുടെ UID
 let currentUserId = null;
-// 🚀 ഫയർബേസ് സെഷൻ വഴി Username-ഉം Verification Status-ഉം കൃത്യമായി ലോഡ് ചെയ്യുന്ന ഫങ്ഷൻ
+
+// 🚀 2. ഫയർബേസ് സെഷൻ വഴി Username-ഉം Verification Status-ഉം കൃത്യമായി ലോഡ് ചെയ്യുന്ന ഫങ്ഷൻ
 async function loadUserSettings() {
     const usernameElement = document.getElementById("acc-username");
 
-    // 1. പഴയ localstorage ഡാറ്റ ഉണ്ടെങ്കിൽ അത് വെച്ച് UI പെട്ടെന്ന് ലോഡ് ആക്കുന്നു (Fast UI Render)
-    const cachedUsername = localStorage.getItem("infinity_username");
+    // 1. LocalStorage ഡാറ്റ വെച്ച് UI അതിവേഗം ലോഡ് ആക്കുന്നു (Fast UI Render)
+    const cachedUser = localStorage.getItem("infinity_user") || localStorage.getItem("spy_active_user");
+    let cachedUsername = localStorage.getItem("infinity_username");
+
+    if (cachedUser) {
+        try {
+            const parsed = JSON.parse(cachedUser);
+            cachedUsername = parsed.username || cachedUsername;
+        } catch(e) {}
+    }
+
     if (cachedUsername && usernameElement) {
         usernameElement.innerText = `@${cachedUsername}`;
     }
 
-    // 2. ഫയർബേസ് ഓതന്റിക്കേഷൻ സെഷൻ ഓട്ടോമാറ്റിക്കായി കണ്ടെത്തുന്ന ലിസണർ
+    // 2. ഫയർബേസ് ഓതന്റിക്കേഷൻ സെഷൻ കൈകാര്യം ചെയ്യുന്നു
     onAuthStateChanged(auth, async (user) => {
         if (user) {
             currentUserId = user.uid;
 
             try {
-                // 'users' കളക്ഷനിൽ നിന്ന് UID വെച്ച് ഡാറ്റ ഫെച്ച് ചെയ്യുന്നു
+                // 'users' കളക്ഷനിൽ നിന്ന് UID വെച്ച് ഡാറ്റ എടുക്കുന്നു
                 const userRef = doc(db, "users", currentUserId);
                 const docSnap = await getDoc(userRef);
 
@@ -59,10 +69,9 @@ async function loadUserSettings() {
                 if (docSnap.exists()) {
                     const data = docSnap.data();
                     
-                    // ഡാറ്റാബേസ് പേര് അല്ലെങ്കിൽ Auth DisplayName
                     currentUsername = data.username || user.displayName || cachedUsername || "";
 
-                    // LocalStorage അപ്ഡേറ്റ് ചെയ്യുന്നു
+                    // LocalStorage പെട്ടെന്ന് അപ്ഡേറ്റ് ചെയ്യുന്നു
                     if (currentUsername) {
                         localStorage.setItem("infinity_username", currentUsername);
                     }
@@ -74,7 +83,7 @@ async function loadUserSettings() {
                             : `${data.wins || 0} Wins`;
                     }
 
-                    // Settings Load
+                    // Settings Toggles Load
                     if (data.settings) {
                         if (document.getElementById("setting-mentions")) document.getElementById("setting-mentions").checked = data.settings.allowMentions || false;
                         if (document.getElementById("setting-muted")) document.getElementById("setting-muted").checked = data.settings.isMuted || false;
@@ -85,7 +94,7 @@ async function loadUserSettings() {
                         }
                     }
                 } else {
-                    // പുതിയ യൂസർ ആണെങ്കിൽ
+                    // പുതിയ യൂസർ അക്കൗണ്ട് ഉണ്ടാക്കുമ്പോൾ
                     currentUsername = user.displayName || cachedUsername || "";
 
                     if (currentUsername) {
@@ -111,14 +120,14 @@ async function loadUserSettings() {
                     }
                 }
 
-                // 🟢 യൂസർ ലോഗിൻ സ്ഥിരീകരിച്ചതിന് ശേഷം തനിയെ Verified ആണോ എന്ന് ചെക്ക് ചെയ്യുന്നു
+                // 🟢 Verification Status പരിശോധിക്കുന്നു
                 await checkVerificationStatus();
 
             } catch (e) {
                 console.error("Error loading user profile:", e);
             }
         } else {
-            // ശരിക്കും ലോഗൗട്ട് ആയ അവസ്ഥയിൽ മാത്രം Guest കാണിക്കും
+            // ശരിക്കും ലോഗൗട്ട് ആയ അവസ്ഥയിൽ മാത്രം Guest User എന്ന് കാണിക്കുന്നു
             if (!cachedUsername && usernameElement) {
                 usernameElement.innerText = "Guest User";
             }
@@ -126,35 +135,43 @@ async function loadUserSettings() {
     });
 }
 
-
 window.updateSetting = async function(key, value) {
-    window.toggleSetting(key, value);
+    if (typeof window.toggleSetting === 'function') {
+        window.toggleSetting(key, value);
+    }
 };
 
 // 3. 💎 Account Center Pop-up Logic
 window.openAccountCenter = async function() {
     if (!currentUserId) return;
-    const userRef = doc(db, "users", currentUserId);
-    const docSnap = await getDoc(userRef);
-    if (docSnap.exists()) {
-        const d = docSnap.data();
-        document.getElementById("accUserId").value = currentUserId;
-        document.getElementById("accDisplayUsername").value = d.username || currentUserId;
-        document.getElementById("accBio").value = d.bio || "";
-        document.getElementById("accWins").value = d.wins || 0;
-        
-        document.getElementById("accountModal").style.display = "flex";
+    try {
+        const userRef = doc(db, "users", currentUserId);
+        const docSnap = await getDoc(userRef);
+        if (docSnap.exists()) {
+            const d = docSnap.data();
+            if (document.getElementById("accUserId")) document.getElementById("accUserId").value = currentUserId;
+            if (document.getElementById("accDisplayUsername")) document.getElementById("accDisplayUsername").value = d.username || currentUserId;
+            if (document.getElementById("accBio")) document.getElementById("accBio").value = d.bio || "";
+            if (document.getElementById("accWins")) document.getElementById("accWins").value = d.wins || 0;
+            
+            const modal = document.getElementById("accountModal");
+            if (modal) modal.style.display = "flex";
+        }
+    } catch(e) {
+        console.error("Account Center Error:", e);
     }
 };
 
 window.closeAccountModal = function() {
-    document.getElementById("accountModal").style.display = "none";
+    const modal = document.getElementById("accountModal");
+    if (modal) modal.style.display = "none";
 };
 
 window.saveAccountDetails = async function(event) {
     event.preventDefault();
     if (!currentUserId) return;
-    const bio = document.getElementById("accBio").value;
+    const bioElem = document.getElementById("accBio");
+    const bio = bioElem ? bioElem.value : "";
     
     try {
         const userRef = doc(db, "users", currentUserId);
@@ -179,19 +196,22 @@ window.shareInviteLink = function() {
 const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzMM-fKI6CPLFbgKJDhO1LqRTUdlXKTr_3k9mV51L5oEW9ckjbQ-9J82agWWRDOzL2u/exec";
 
 window.applyCreatorBadge = async function() {
-    document.getElementById("badgeModal").style.display = "flex";
+    const badgeModal = document.getElementById("badgeModal");
+    if (badgeModal) badgeModal.style.display = "flex";
     await checkVerificationStatus();
 };
 
 window.closeBadgeModal = function() {
-    document.getElementById("badgeModal").style.display = "none";
+    const badgeModal = document.getElementById("badgeModal");
+    if (badgeModal) badgeModal.style.display = "none";
 };
 
+// 🟢 Verification Status Check Logic (Fixed)
 async function checkVerificationStatus() {
     const statusTag = document.getElementById("badge-status-tag");
     const submitBtn = document.getElementById("submitBtn");
 
-    if (!statusTag || !currentUserId) return;
+    if (!currentUserId) return;
 
     try {
         const userDocRef = doc(db, "users", currentUserId);
@@ -199,8 +219,10 @@ async function checkVerificationStatus() {
 
         // 🟢 1. അക്കൗണ്ട് വെരിഫൈഡ് ആണെങ്കിൽ (Green Badge)
         if (userDocSnap.exists() && userDocSnap.data().isVerified === true) {
-            statusTag.innerText = "✓ Verified Creator";
-            statusTag.className = "status-badge status-verified";
+            if (statusTag) {
+                statusTag.innerText = "✓ Verified Creator";
+                statusTag.className = "status-badge status-verified";
+            }
             if (submitBtn) {
                 submitBtn.innerText = "Already Verified";
                 submitBtn.disabled = true;
@@ -216,16 +238,20 @@ async function checkVerificationStatus() {
         const querySnapshot = await getDocs(q);
 
         if (!querySnapshot.empty) {
-            statusTag.innerText = "⏳ Under Review";
-            statusTag.className = "status-badge status-pending";
+            if (statusTag) {
+                statusTag.innerText = "⏳ Under Review";
+                statusTag.className = "status-badge status-pending";
+            }
             if (submitBtn) {
                 submitBtn.innerText = "Application Submitted";
                 submitBtn.disabled = true;
             }
         } else {
             // 🔴 3. വെരിഫൈഡ് അല്ല / അപേക്ഷിച്ചിട്ടില്ല (Red Badge)
-            statusTag.innerText = "✖ Not Verified";
-            statusTag.className = "status-badge status-not-verified";
+            if (statusTag) {
+                statusTag.innerText = "✖ Not Verified";
+                statusTag.className = "status-badge status-not-verified";
+            }
             if (submitBtn) {
                 submitBtn.innerText = "Submit Application";
                 submitBtn.disabled = false;
@@ -242,12 +268,14 @@ window.submitBadgeApplication = async function(event) {
     if (!currentUserId) return;
 
     const submitBtn = document.getElementById("submitBtn");
-    submitBtn.innerText = "Submitting...";
-    submitBtn.disabled = true;
+    if (submitBtn) {
+        submitBtn.innerText = "Submitting...";
+        submitBtn.disabled = true;
+    }
 
-    const username = document.getElementById("badgeUsername").value;
-    const email = document.getElementById("badgeEmail").value;
-    const message = document.getElementById("badgeMessage").value;
+    const username = document.getElementById("badgeUsername") ? document.getElementById("badgeUsername").value : "";
+    const email = document.getElementById("badgeEmail") ? document.getElementById("badgeEmail").value : "";
+    const message = document.getElementById("badgeMessage") ? document.getElementById("badgeMessage").value : "";
 
     const payload = {
         userId: currentUserId,
@@ -270,7 +298,8 @@ window.submitBadgeApplication = async function(event) {
         }
 
         alert("🎉 Creator Badge Application Submitted Successfully!");
-        document.getElementById("badgeForm").reset();
+        const badgeForm = document.getElementById("badgeForm");
+        if (badgeForm) badgeForm.reset();
         await checkVerificationStatus();
         closeBadgeModal();
 
@@ -278,41 +307,50 @@ window.submitBadgeApplication = async function(event) {
         console.error("Submission Error: ", error);
         alert("❌ Something went wrong. Please try again!");
     } finally {
-        submitBtn.innerText = "Submit Application";
-        submitBtn.disabled = false;
+        if (submitBtn) {
+            submitBtn.innerText = "Submit Application";
+            submitBtn.disabled = false;
+        }
     }
 };
 
 // 6. 🎵 Music Passcode & Upload Logic
 window.openMusicPasscodeModal = function() {
-    document.getElementById("musicPasscodeModal").style.display = "flex";
-    document.getElementById("musicPasscode").value = "";
-    document.getElementById("passcodeError").style.display = "none";
+    const modal = document.getElementById("musicPasscodeModal");
+    if (modal) modal.style.display = "flex";
+    if (document.getElementById("musicPasscode")) document.getElementById("musicPasscode").value = "";
+    if (document.getElementById("passcodeError")) document.getElementById("passcodeError").style.display = "none";
 };
 
 window.closeMusicPasscodeModal = function() {
-    document.getElementById("musicPasscodeModal").style.display = "none";
+    const modal = document.getElementById("musicPasscodeModal");
+    if (modal) modal.style.display = "none";
 };
 
 window.closeMusicUploadModal = function() {
-    document.getElementById("musicUploadModal").style.display = "none";
+    const modal = document.getElementById("musicUploadModal");
+    if (modal) modal.style.display = "none";
 };
 
 window.verifyMusicPasscode = function() {
-    const inputCode = document.getElementById("musicPasscode").value;
+    const inputCode = document.getElementById("musicPasscode") ? document.getElementById("musicPasscode").value : "";
     if (inputCode === SECRET_PASSCODE) {
         closeMusicPasscodeModal();
-        document.getElementById("musicUploadModal").style.display = "flex";
+        const uploadModal = document.getElementById("musicUploadModal");
+        if (uploadModal) uploadModal.style.display = "flex";
     } else {
-        document.getElementById("passcodeError").style.display = "block";
+        const err = document.getElementById("passcodeError");
+        if (err) err.style.display = "block";
     }
 };
 
 window.uploadMusicToFirestore = async function(event) {
     event.preventDefault();
     const btn = document.getElementById("mSubmitBtn");
-    btn.innerText = "Uploading...";
-    btn.disabled = true;
+    if (btn) {
+        btn.innerText = "Uploading...";
+        btn.disabled = true;
+    }
 
     const title = document.getElementById("mTitle").value;
     const artist = document.getElementById("mArtist").value;
@@ -329,14 +367,17 @@ window.uploadMusicToFirestore = async function(event) {
         });
 
         alert("🎉 Music successfully added to Spymo Library!");
-        document.getElementById("musicForm").reset();
+        const mForm = document.getElementById("musicForm");
+        if (mForm) mForm.reset();
         closeMusicUploadModal();
     } catch (error) {
         console.error("Error adding document: ", error);
         alert("Failed to add music: " + error.message);
     } finally {
-        btn.innerText = "Save Song to Library";
-        btn.disabled = false;
+        if (btn) {
+            btn.innerText = "Save Song to Library";
+            btn.disabled = false;
+        }
     }
 };
 
